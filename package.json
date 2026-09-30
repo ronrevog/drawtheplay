@@ -1,0 +1,22 @@
+{
+  "name": "draw-the-play-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "node --import tsx --test src/*.test.js",
+    "data:refresh": "python3 scripts/build_catalog.py --refresh",
+    "sim:audit": "node --import tsx scripts/simulation-audit.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "vite": "^6.2.0"
+  }
+}

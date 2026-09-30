@@ -1,0 +1,522 @@
+[
+  {
+    "id": "wildcats",
+    "name": "Wildcats",
+    "primary": "#F47321",
+    "secondary": "#005030",
+    "tertiary": "#FFFFFF",
+    "design": "Pearl white shell, green facemask, orange-green center stripe, original fierce wildcat head decal in orange and green.",
+    "kind": "fictional",
+    "helmet": "/helmets/wildcats.png"
+  },
+  {
+    "id": "sabers",
+    "name": "Sabers",
+    "primary": "#142840",
+    "secondary": "#E4B74C",
+    "tertiary": "#E9EEF4",
+    "design": "Midnight navy shell, gold facemask, two crossed curved sabers on a small silver shield.",
+    "kind": "fictional",
+    "helmet": "/helmets/sabers.png"
+  },
+  {
+    "id": "orcas",
+    "name": "Orcas",
+    "primary": "#071E2A",
+    "secondary": "#22BED0",
+    "tertiary": "#FFFFFF",
+    "design": "Deep ocean shell, white facemask, original leaping black-and-white orca with a turquoise wave.",
+    "kind": "fictional",
+    "helmet": "/helmets/orcas.png"
+  },
+  {
+    "id": "knights",
+    "name": "Knights",
+    "primary": "#242831",
+    "secondary": "#B9C3CF",
+    "tertiary": "#D9AE56",
+    "design": "Metallic silver shell, charcoal facemask, original angular knight visor crest in charcoal and gold.",
+    "kind": "fictional",
+    "helmet": "/helmets/knights.png"
+  },
+  {
+    "id": "reds",
+    "name": "Reds",
+    "primary": "#C62832",
+    "secondary": "#FFF0D4",
+    "tertiary": "#22252B",
+    "design": "Glossy red shell, cream facemask, original proud rooster head decal with cream feathers and charcoal outlines.",
+    "kind": "fictional",
+    "helmet": "/helmets/reds.png"
+  },
+  {
+    "id": "thunderbirds",
+    "name": "Thunderbirds",
+    "primary": "#472C85",
+    "secondary": "#F5C64F",
+    "tertiary": "#E7EAF1",
+    "design": "Purple shell, gold facemask, original geometric thunderbird with broad gold wings.",
+    "kind": "fictional",
+    "helmet": "/helmets/thunderbirds.png"
+  },
+  {
+    "id": "copperheads",
+    "name": "Copperheads",
+    "primary": "#B66B3F",
+    "secondary": "#102E2A",
+    "tertiary": "#F3E4C9",
+    "design": "Metallic copper shell, forest facemask, original coiled copperhead snake decal in forest and cream.",
+    "kind": "fictional",
+    "helmet": "/helmets/copperheads.png"
+  },
+  {
+    "id": "glaciers",
+    "name": "Glaciers",
+    "primary": "#9DDCF2",
+    "secondary": "#17395F",
+    "tertiary": "#FFFFFF",
+    "design": "Ice blue pearl shell, navy facemask, original jagged white glacier peak decal with navy outlines.",
+    "kind": "fictional",
+    "helmet": "/helmets/glaciers.png"
+  },
+  {
+    "id": "outlaws",
+    "name": "Outlaws",
+    "primary": "#272329",
+    "secondary": "#C44B38",
+    "tertiary": "#D8C8AB",
+    "design": "Matte charcoal shell, rusty red facemask, original masked western outlaw face decal in bone and red.",
+    "kind": "fictional",
+    "helmet": "/helmets/outlaws.png"
+  },
+  {
+    "id": "sentinels",
+    "name": "Sentinels",
+    "primary": "#2344A5",
+    "secondary": "#D1D9E3",
+    "tertiary": "#F06D35",
+    "design": "Royal blue shell, silver facemask, original shield and watchtower decal with an orange central accent.",
+    "kind": "fictional",
+    "helmet": "/helmets/sentinels.png"
+  },
+  {
+    "id": "stingrays",
+    "name": "Stingrays",
+    "primary": "#007F82",
+    "secondary": "#EC5C83",
+    "tertiary": "#E8F5F3",
+    "design": "Teal shell, pale silver facemask, original sleek stingray silhouette in pink and white.",
+    "kind": "fictional",
+    "helmet": "/helmets/stingrays.png"
+  },
+  {
+    "id": "bison",
+    "name": "Bison",
+    "primary": "#624633",
+    "secondary": "#D6A64F",
+    "tertiary": "#F5E8CC",
+    "design": "Deep earth-brown shell, gold facemask, original charging bison head decal in cream and gold.",
+    "kind": "fictional",
+    "helmet": "/helmets/bison.png"
+  },
+  {
+    "id": "firebirds",
+    "name": "Firebirds",
+    "primary": "#9C263B",
+    "secondary": "#FF9C35",
+    "tertiary": "#F8DD8D",
+    "design": "Burgundy shell, amber facemask, original rising phoenix decal with orange and pale-gold feathers.",
+    "kind": "fictional",
+    "helmet": "/helmets/firebirds.png"
+  },
+  {
+    "id": "ironclads",
+    "name": "Ironclads",
+    "primary": "#414B59",
+    "secondary": "#36B7B0",
+    "tertiary": "#D5DBDF",
+    "design": "Gunmetal shell, teal facemask, original riveted armored ship prow decal in silver and teal.",
+    "kind": "fictional",
+    "helmet": "/helmets/ironclads.png"
+  },
+  {
+    "id": "jackals",
+    "name": "Jackals",
+    "primary": "#BE9B59",
+    "secondary": "#25203D",
+    "tertiary": "#F1E6CD",
+    "design": "Sand-gold shell, dark plum facemask, original angular jackal head decal in plum and cream.",
+    "kind": "fictional",
+    "helmet": "/helmets/jackals.png"
+  },
+  {
+    "id": "redwoods",
+    "name": "Redwoods",
+    "primary": "#194A3B",
+    "secondary": "#BB633D",
+    "tertiary": "#F0DFBC",
+    "design": "Forest green shell, copper facemask, original towering redwood tree decal in cream with copper outlines.",
+    "kind": "fictional",
+    "helmet": "/helmets/redwoods.png"
+  },
+  {
+    "id": "comets",
+    "name": "Comets",
+    "primary": "#342A75",
+    "secondary": "#FF7045",
+    "tertiary": "#D6EBFF",
+    "design": "Indigo shell, ice-blue facemask, original flaming comet decal with a coral trail.",
+    "kind": "fictional",
+    "helmet": "/helmets/comets.png"
+  },
+  {
+    "id": "krakens",
+    "name": "Krakens",
+    "primary": "#38274A",
+    "secondary": "#24A5A1",
+    "tertiary": "#D9C5F1",
+    "design": "Dark plum shell, aqua facemask, original tentacled kraken head decal in aqua and lavender.",
+    "kind": "fictional",
+    "helmet": "/helmets/krakens.png"
+  },
+  {
+    "id": "roadrunners",
+    "name": "Roadrunners",
+    "primary": "#D45B2A",
+    "secondary": "#25495E",
+    "tertiary": "#F7DEAD",
+    "design": "Burnt orange shell, slate-blue facemask, original sprinting roadrunner bird decal in cream and blue.",
+    "kind": "fictional",
+    "helmet": "/helmets/roadrunners.png"
+  },
+  {
+    "id": "monarchs",
+    "name": "Monarchs",
+    "primary": "#652C70",
+    "secondary": "#E1B950",
+    "tertiary": "#F1E5D5",
+    "design": "Royal plum shell, gold facemask, original bold crowned lion face decal in gold and ivory.",
+    "kind": "fictional",
+    "helmet": "/helmets/monarchs.png"
+  },
+  {
+    "id": "pro-ari",
+    "code": "ARI",
+    "name": "Arizona Cardinals",
+    "primary": "#97233F",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-ari.png"
+  },
+  {
+    "id": "pro-atl",
+    "code": "ATL",
+    "name": "Atlanta Falcons",
+    "primary": "#A71930",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-atl.png"
+  },
+  {
+    "id": "pro-bal",
+    "code": "BAL",
+    "name": "Baltimore Ravens",
+    "primary": "#241773",
+    "secondary": "#9E7C0C",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-bal.png"
+  },
+  {
+    "id": "pro-buf",
+    "code": "BUF",
+    "name": "Buffalo Bills",
+    "primary": "#00338D",
+    "secondary": "#C60C30",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-buf.png"
+  },
+  {
+    "id": "pro-car",
+    "code": "CAR",
+    "name": "Carolina Panthers",
+    "primary": "#0085CA",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-car.png"
+  },
+  {
+    "id": "pro-chi",
+    "code": "CHI",
+    "name": "Chicago Bears",
+    "primary": "#0B162A",
+    "secondary": "#E64100",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-chi.png"
+  },
+  {
+    "id": "pro-cin",
+    "code": "CIN",
+    "name": "Cincinnati Bengals",
+    "primary": "#FB4F14",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-cin.png"
+  },
+  {
+    "id": "pro-cle",
+    "code": "CLE",
+    "name": "Cleveland Browns",
+    "primary": "#FF3C00",
+    "secondary": "#311D00",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-cle.png"
+  },
+  {
+    "id": "pro-dal",
+    "code": "DAL",
+    "name": "Dallas Cowboys",
+    "primary": "#002244",
+    "secondary": "#B0B7BC",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-dal.png"
+  },
+  {
+    "id": "pro-den",
+    "code": "DEN",
+    "name": "Denver Broncos",
+    "primary": "#002244",
+    "secondary": "#FB4F14",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-den.png"
+  },
+  {
+    "id": "pro-det",
+    "code": "DET",
+    "name": "Detroit Lions",
+    "primary": "#0076B6",
+    "secondary": "#B0B7BC",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-det.png"
+  },
+  {
+    "id": "pro-gb",
+    "code": "GB",
+    "name": "Green Bay Packers",
+    "primary": "#203731",
+    "secondary": "#FFB612",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-gb.png"
+  },
+  {
+    "id": "pro-hou",
+    "code": "HOU",
+    "name": "Houston Texans",
+    "primary": "#03202F",
+    "secondary": "#A71930",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-hou.png"
+  },
+  {
+    "id": "pro-ind",
+    "code": "IND",
+    "name": "Indianapolis Colts",
+    "primary": "#002C5F",
+    "secondary": "#a5acaf",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-ind.png"
+  },
+  {
+    "id": "pro-jax",
+    "code": "JAX",
+    "name": "Jacksonville Jaguars",
+    "primary": "#006778",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-jax.png"
+  },
+  {
+    "id": "pro-kc",
+    "code": "KC",
+    "name": "Kansas City Chiefs",
+    "primary": "#E31837",
+    "secondary": "#FFB612",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-kc.png"
+  },
+  {
+    "id": "pro-la",
+    "code": "LA",
+    "name": "Los Angeles Rams",
+    "primary": "#003594",
+    "secondary": "#FFD100",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-la.png"
+  },
+  {
+    "id": "pro-lac",
+    "code": "LAC",
+    "name": "Los Angeles Chargers",
+    "primary": "#007BC7",
+    "secondary": "#ffc20e",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-lac.png"
+  },
+  {
+    "id": "pro-lv",
+    "code": "LV",
+    "name": "Las Vegas Raiders",
+    "primary": "#000000",
+    "secondary": "#A5ACAF",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-lv.png"
+  },
+  {
+    "id": "pro-mia",
+    "code": "MIA",
+    "name": "Miami Dolphins",
+    "primary": "#008E97",
+    "secondary": "#F58220",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-mia.png"
+  },
+  {
+    "id": "pro-min",
+    "code": "MIN",
+    "name": "Minnesota Vikings",
+    "primary": "#4F2683",
+    "secondary": "#FFC62F",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-min.png"
+  },
+  {
+    "id": "pro-ne",
+    "code": "NE",
+    "name": "New England Patriots",
+    "primary": "#002244",
+    "secondary": "#C60C30",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-ne.png"
+  },
+  {
+    "id": "pro-no",
+    "code": "NO",
+    "name": "New Orleans Saints",
+    "primary": "#D3BC8D",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-no.png"
+  },
+  {
+    "id": "pro-nyg",
+    "code": "NYG",
+    "name": "New York Giants",
+    "primary": "#0B2265",
+    "secondary": "#A71930",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-nyg.png"
+  },
+  {
+    "id": "pro-nyj",
+    "code": "NYJ",
+    "name": "New York Jets",
+    "primary": "#003F2D",
+    "secondary": "#000000",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-nyj.png"
+  },
+  {
+    "id": "pro-phi",
+    "code": "PHI",
+    "name": "Philadelphia Eagles",
+    "primary": "#004C54",
+    "secondary": "#A5ACAF",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-phi.png"
+  },
+  {
+    "id": "pro-pit",
+    "code": "PIT",
+    "name": "Pittsburgh Steelers",
+    "primary": "#000000",
+    "secondary": "#FFB612",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-pit.png"
+  },
+  {
+    "id": "pro-sea",
+    "code": "SEA",
+    "name": "Seattle Seahawks",
+    "primary": "#002244",
+    "secondary": "#69be28",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-sea.png"
+  },
+  {
+    "id": "pro-sf",
+    "code": "SF",
+    "name": "San Francisco 49ers",
+    "primary": "#AA0000",
+    "secondary": "#B3995D",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-sf.png"
+  },
+  {
+    "id": "pro-tb",
+    "code": "TB",
+    "name": "Tampa Bay Buccaneers",
+    "primary": "#A71930",
+    "secondary": "#322F2B",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-tb.png"
+  },
+  {
+    "id": "pro-ten",
+    "code": "TEN",
+    "name": "Tennessee Titans",
+    "primary": "#4495D2",
+    "secondary": "#D50A0A",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-ten.png"
+  },
+  {
+    "id": "pro-was",
+    "code": "WAS",
+    "name": "Washington Commanders",
+    "primary": "#5A1414",
+    "secondary": "#FFB612",
+    "tertiary": "#FFFFFF",
+    "kind": "pro",
+    "helmet": "/helmets/pro-was.png"
+  }
+]

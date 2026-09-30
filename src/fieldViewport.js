@@ -1,0 +1,1 @@
+export function fieldViewport(zoom,x=26.65,y=70,pan={x:0,y:0}){const widths=[59.3,59.3,38,25],heights=[126,80,52,34];const z=Math.max(0,Math.min(3,zoom)),w=widths[z],h=heights[z];if(z===0)return [-3,-13,w,h];return [Math.max(-3,Math.min(56.3-w,x+(pan.x||0)-w/2)),Math.max(-13,Math.min(113-h,y+(pan.y||0)-h*.58)),w,h];}

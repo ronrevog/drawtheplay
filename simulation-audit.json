@@ -1,0 +1,22 @@
+{
+  "modelVersion": 2,
+  "scope": "240 synthetic plays across 32 NFL rosters, all 30 library plays and 4 defensive looks. This is a behavior audit, not a statistical fit to NFL outcomes.",
+  "plays": 240,
+  "passPlays": 168,
+  "runPlays": 72,
+  "outcomes": {
+    "incomplete": 46,
+    "pass": 97,
+    "sack": 21,
+    "interception": 2,
+    "run": 72,
+    "fumble": 2
+  },
+  "meanPassYards": 14.03,
+  "meanRunYards": 6.63,
+  "meanTimeToThrow": 2.19,
+  "pressuredPassPlays": 62,
+  "meanSummedBlockSeconds": 8.06,
+  "meanDuration": 4.03,
+  "forcedWhistles": 0
+}
