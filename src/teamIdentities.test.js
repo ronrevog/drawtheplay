@@ -24,3 +24,6 @@ test('preset picker omits editable color controls and pro helmet uses only local
 });
 
 test('changing identity freezes the old palette for an already running game',()=>{const state={...initialState(),game:{name:'My franchise'}};const next=selectIdentity(state,'wildcats');assert.equal(next.game.color,state.color);assert.equal(next.game.teamIdentity,null);assert.equal(next.color,'#F47321');const again=selectIdentity(next,'orcas');assert.equal(again.game.color,state.color)});
+
+// Assets are part of the shipped identity catalog, not optional placeholders.
+test('every team identity has a complete PNG helmet asset',async()=>{const {readFileSync}=await import('node:fs');for(const team of TEAM_IDENTITIES){const bytes=readFileSync(new URL('../public'+team.helmet,import.meta.url));assert.equal(bytes.subarray(1,4).toString(),'PNG',team.id);assert(bytes.readUInt32BE(16)>=512,team.id);assert(bytes.readUInt32BE(20)>=512,team.id);assert.equal(bytes[25],6,`${team.id} preserves RGBA transparency`)}});
