@@ -1,0 +1,10 @@
+.all22-field{position:relative;width:100%;height:100%;min-height:0;overflow:hidden;background:#10281f}.all22-field canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none}.all22-badge{position:absolute;top:14px;left:14px;z-index:1;pointer-events:none;background:#101d26e6;border:1px solid #688375;border-radius:5px;padding:9px 12px;color:#a5efc5;font:bold 12px monospace;letter-spacing:1px}.all22-badge span{display:block;margin-top:5px;color:#e8f0e9;font-size:10px;letter-spacing:0}.all22-hint{position:absolute;bottom:10px;left:12px;right:12px;text-align:center;font-size:10px;color:#e1efdf;background:#0a1a16c9;padding:6px;pointer-events:none}.field-presentation{display:grid;gap:7px;margin:0 0 14px;font-size:11px}.field-presentation select{width:100%;padding:9px 3px}.field-presentation small{font-size:10px;line-height:1.5;color:#aab8d0}
+.field-presentation label{display:grid;gap:7px}.field-presentation>button{padding:8px;border:1px solid #49647b;border-radius:4px;color:#e5edf5;background:#253449}
+
+.field-assignment-ink{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;overflow:hidden}.all22-badge,.all22-hint{z-index:2}
+
+.all22-field .all22-terrain{position:absolute;inset:0;pointer-events:none}.all22-field .all22-players{position:relative;z-index:1}
+
+.formation-editor{padding:10px 0;border-bottom:1px solid #354c42;margin-bottom:12px;font-size:11px}.formation-editor p{line-height:1.5}.formation-editor button,.formation-editor select{width:100%;margin-bottom:6px;padding:8px}.formation-modes button[aria-pressed="true"]{background:#365d46;border-color:#a8dd98}.formation-valid{color:#bceba3}.formation-invalid{color:#ffb49a}.formation-editor label{display:grid;gap:6px}
+
+.field-loading{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:#10281f;color:#dce9dc;font-size:14px;letter-spacing:.02em}.all22-field[aria-busy="true"] canvas,.all22-field[aria-busy="true"] .field-assignment-ink{visibility:hidden}

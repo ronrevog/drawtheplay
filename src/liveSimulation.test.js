@@ -1,6 +1,20 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {LIBRARY_PLAYS,validPlay} from './playbook.js';import {resolveLivePlay,blockType,defensiveAlignment,interpolateFrame} from './liveSimulation.js';
 const ps=JSON.parse(readFileSync(new URL('../public/data/catalog.json',import.meta.url))).players;const offense=ps.filter(p=>p.eligible&&p.team==='KC'),defense=ps.filter(p=>p.eligible&&p.team==='BUF');const args={play:LIBRARY_PLAYS[0],coverage:'Cover 2',offense,defense,seed:'live',spot:25};
+test('pressure triggers a quick throw to an open receiver before a deep route develops',()=>{
+ const r=resolveLivePlay({...args,play:LIBRARY_PLAYS[5],coverage:'Blitz',offense:[],defense:[],seed:'hot-5'});
+ const pressure=r.events.find(e=>e.type==='Pressure'),set=r.events.find(e=>e.type==='Set to throw'&&e.hot),thrown=r.events.find(e=>e.type==='Throw');
+ assert(pressure&&set&&thrown);assert.equal(thrown.to,set.to);
+ assert(thrown.t-pressure.t<=.25);assert(thrown.t-set.t>=.14);assert(thrown.separation>2.2);
+ const frame=r.frames.find(f=>f.t>=set.t),receiver=frame.players.find(p=>p.slot===set.to);
+ const origin=r.frames[0].players.find(p=>p.slot===set.to);
+ assert(receiver.y-origin.y<8,'hot read bypasses the normal deep-route development wait');
+});
+test('pressure does not invent a receiver when all eligible players stay in protection',()=>{
+ const play=structuredClone(LIBRARY_PLAYS[5]);for(const slot of ['WR1','WR2','WR3','TE','RB'])delete play.routes[slot];
+ const r=resolveLivePlay({...args,play,coverage:'Blitz',offense:[],defense:[],seed:'hot-5'});
+ assert(!r.events.some(e=>e.hot||e.type==='Throw'));
+});
 test('full library includes varied pass/run plays and valid reads',()=>{assert.equal(LIBRARY_PLAYS.length,30);assert(LIBRARY_PLAYS.every(validPlay));assert(LIBRARY_PLAYS.some(p=>p.runner==='QB'));});
 test('22 players move in deterministic tick frames; ball and result agree',()=>{const a=resolveLivePlay(args),b=resolveLivePlay(args);assert.deepEqual(a,b);assert.equal(a.people.length,22);assert(a.frames.length>10);const first=a.frames[0],last=a.frames.at(-1);assert.equal(first.players.length,22);assert(last.players.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)));assert.equal(last.players.filter((p,i)=>Math.hypot(p.x-first.players[i].x,p.y-first.players[i].y)>.1).length,22);if(['pass','run','sack'].includes(a.kind)){const carrier=a.people.find(p=>p.id===a.playerId);const end=last.players.find(p=>p.slot===carrier.slot&&p.side===carrier.side);assert.equal(a.yards,Math.round(end.y));}assert(Number.isFinite(interpolateFrame(a.frames,.275).ball.x));});
 test('QB works beyond primary reads and logs throw/catch timing',()=>{let progressed=false,threw=false;for(let i=0;i<40;i++){const r=resolveLivePlay({...args,seed:`read-${i}`,coverage:'Man'});if(r.readOrder>1)progressed=true;if(r.events.some(e=>e.type==='Throw')){threw=true;const throwEvent=r.events.find(e=>e.type==='Throw');const catchEvent=r.events.find(e=>e.type==='Catch');if(catchEvent)assert(catchEvent.t>throwEvent.t);}}assert(progressed);assert(threw);});

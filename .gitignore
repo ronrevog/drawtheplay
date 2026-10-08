@@ -7,3 +7,6 @@ cache/
 !.env.example
 *.log
 coverage/
+public/local-reference/
+all22-check.html
+src/all22-check.jsx

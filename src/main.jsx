@@ -1,3 +1,4 @@
+import {loadPlayerSprites} from './playerSprites.js';
 import {TeamHelmet} from './TeamIdentity.jsx';
 import {PremiumPacks} from './PremiumPacks.jsx';
 import {premiumOffer,openPremiumPack} from './premiumPacks.js';
@@ -15,6 +16,7 @@ const KEY='dtp-web-franchise-v1';const money=n=>n.toLocaleString('en-US');
 const positions=['All','QB','RB','WR','TE','OL','DL','LB','DB','K','P','LS'];
 class AppBoundary extends React.Component {state={error:null};static getDerivedStateFromError(error){return {error}}componentDidCatch(error){console.error('Draw the Play render error',error)}render(){return this.state.error?<div className="loading"><BrandMark size={64}/><h1>Let’s get you back in the game.</h1><p>Your saved franchise is still on this device.</p><p role="alert">{this.state.error.message}</p><button className="primary" onClick={()=>location.reload()}>Reload game</button></div>:this.props.children}}
 function App(){
+ useEffect(()=>{void loadPlayerSprites()},[]);
  const [data,setData]=useState(null),[error,setError]=useState(''),[state,setState]=useState(null),[tab,setTab]=useState('home'),[query,setQuery]=useState(''),[position,setPosition]=useState('All'),[scope,setScope]=useState('available'),[sort,setSort]=useState('rating'),[team,setTeam]=useState('All'),[limit,setLimit]=useState(30),[detail,setDetail]=useState(null),[reveal,setReveal]=useState(null),[toast,setToast]=useState(''),[about,setAbout]=useState(false),[confirm,setConfirm]=useState(null),[storageError,setStorageError]=useState('');
  const stateRef=useRef(state);stateRef.current=state;const file=useRef();const modalRef=useRef();const triggerRef=useRef();
  useEffect(()=>{fetch('/data/catalog.json').then(r=>{if(!r.ok)throw Error('Unable to load the player catalog.');return r.json()}).then(d=>{setData(d);let saved=null;try{saved=localStorage.getItem(KEY)}catch{setStorageError('Browser storage is unavailable. Export your team to keep it.')}setState(restore(saved,d.players));}).catch(e=>setError(e.message));},[]);

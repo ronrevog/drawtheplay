@@ -2,6 +2,21 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import {r
 import {specialLineup,resolveSpecialTeams} from './specialTeams.js';import {initialState,autoFill,ROSTER_TARGETS,LIMIT,recruit,restore} from './economy.js';import {startPractice,simulateSnap} from './practice.js';import {fromOffenseYards,toOffenseYards,fieldGoalDistance} from './engine/field.ts';
 const players=JSON.parse(readFileSync(new URL('../public/data/catalog.json',import.meta.url))).players,home=players.filter(p=>p.eligible&&p.team==='KC'),away=players.filter(p=>p.eligible&&p.team==='BUF');
 const state={...startPractice(home,away,'KC','BUF','special-test').state,possession:'home',yardLine:35};
+test('field goals and PATs use a balanced block front with one fake guard',()=>{
+ for(const type of ['fg','pat']){
+  const defenders=specialLineup(type,home,away,75).filter(p=>p.side==='defense');
+  const front=defenders.filter(p=>p.y<2),support=defenders.filter(p=>p.y>=2);
+  assert.equal(front.length,10);assert.equal(support.length,1);
+  assert.equal(front.filter(p=>p.x<26.65).length,5);assert.equal(front.filter(p=>p.x>26.65).length,5);
+  for(let i=0;i<5;i++)assert(Math.abs(front[i].x+front[9-i].x-53.3)<1e-8);
+  assert(front.every(p=>Math.abs(p.x-26.65)>=1.79));assert.equal(support[0].x,26.65);
+  const result=resolveSpecialTeams({state:{...state,phase:type==='pat'?'PAT':'Scrimmage'},type,offense:home,defense:away,seed:'block-front'});
+  const frame=result.simulation.frames.find(f=>f.t===.3);
+  assert.equal(frame.players.find(p=>p.slot==='D11').status,'Guard fake');
+  assert.equal(frame.players.find(p=>p.slot==='D1').status,'Edge rush');
+  assert.equal(frame.players.find(p=>p.slot==='D10').status,'Edge rush');
+ }
+});
 test('53-man roster fills affordably, preserves saves and rejects a 54th player',()=>{const full=autoFill(initialState(),players,ROSTER_TARGETS);assert.equal(LIMIT,53);assert.equal(full.roster.length,53);assert(full.credits>=0);assert.equal(restore(JSON.stringify(full),players).roster.length,53);const next=players.find(p=>p.starter&&!full.roster.some(r=>r.id===p.id));assert.throws(()=>recruit(full,next),/full/);const legacy={...full,budgetVersion:undefined,credits:500};const upgraded=restore(JSON.stringify(legacy),players);assert.equal(upgraded.credits,25500);assert.equal(restore(JSON.stringify(upgraded),players).credits,25500);});
 test('each special team fields 11 distinct real players with correct specialists',()=>{for(const type of ['kickoff','punt','fg','pat']){const people=specialLineup(type,home,away,35);assert.equal(people.length,22);for(const side of ['offense','defense'])assert.equal(new Set(people.filter(p=>p.side===side).map(p=>p.id)).size,11);if(type!=='kickoff'){const ls=people.find(p=>p.slot==='LS');assert.equal(home.find(p=>p.id===ls.id).position,'LS');}const k=people.find(p=>p.slot===(type==='punt'?'P':'K'));assert.equal(home.find(p=>p.id===k.id).position,type==='punt'?'P':'K');}});
 test('dynamic kickoff coverage holds until landing; returns and touchbacks agree with next possession',()=>{let returns=0,touchbacks=0;for(let i=0;i<30;i++){const r=resolveSpecialTeams({state,type:'kickoff',offense:home,defense:away,seed:`ko-${i}`});const first=r.simulation.frames[0];for(const f of r.simulation.frames.filter(f=>f.t<4.6))for(const p of f.players.filter(p=>/^C\d|^R\d/.test(p.slot))){const a=first.players.find(q=>q.slot===p.slot);assert.equal(p.x,a.x);assert.equal(p.y,a.y);}assert.equal(r.state.possession,'away');if(r.simulation.outcome==='Touchback'){touchbacks++;assert.equal(toOffenseYards(r.state.yardLine,'away'),35);}if(r.simulation.events.some(e=>e.type==='Return')){returns++;if(r.state.phase==='Scrimmage')assert.equal(toOffenseYards(r.state.yardLine,'away'),Math.max(1,Math.min(99,Math.round(100-35-r.simulation.frames.at(-1).ball.y))));}}assert(returns>0);assert(touchbacks>0);});

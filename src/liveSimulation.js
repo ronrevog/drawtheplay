@@ -1,6 +1,7 @@
+import {formationRules} from './offensiveFormation.js';
 import {normalizeDefense} from './defensivePlan.js';
 import {DT,distance as dist,footballTraits,steer,followRoute,separateBodies,segmentDistance} from './footballPhysics.js';
-import {FORMATIONS,ELIGIBLE,fieldPlayers,orderedRoster} from './playbook.js';
+import {FORMATIONS,offensiveAlignment,ELIGIBLE,fieldPlayers,orderedRoster} from './playbook.js';
 import {createRng} from './engine/rng.ts';
 export const LINE=['LT','LG','C','RG','RT'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -17,29 +18,31 @@ export function defensiveAlignment(coverage){
 export function lineup(play,coverage,offense,defense,offDepth={},defDepth={},defensePlan={},spot=25){
  const plan=normalizeDefense(defensePlan,spot);const f=fieldPlayers(offense,offDepth),order=orderedRoster(defense,defDepth);const get=(pos,n)=>order.filter(p=>p.position===pos)[n];const d={DE1:get('DL',0),DT1:get('DL',1),DT2:get('DL',2),DE2:get('DL',3),LB1:get('LB',0),LB2:get('LB',1),LB3:get('LB',2),CB1:get('DB',0),CB2:get('DB',1),S1:get('DB',2),S2:get('DB',3)};
  const make=(slot,side,p,xy)=>({slot,side,id:p?.id||`${side}-${slot}`,name:p?.name||slot,number:p?.number||slot,rating:p?.overall||60,traits:footballTraits(p,side==='offense'?(LINE.includes(slot)?'OL':slot.startsWith('WR')?'WR':slot):(slot.startsWith('D')?'DL':slot.startsWith('LB')?'LB':'DB')),vx:0,vy:0,distance:0,status:'Set',...xy});
- return [...FORMATIONS[play.formation].map(([slot,x,y])=>make(slot,'offense',f[slot],worldPoint([x,y]))),...defensiveAlignment(coverage).map(({slot,x,y})=>make(slot,'defense',d[slot],plan[slot]?.start||{x,y}))];
+ return [...offensiveAlignment(play).map(([slot,x,y])=>make(slot,'offense',f[slot],worldPoint([x,y]))),...defensiveAlignment(coverage).map(({slot,x,y})=>make(slot,'defense',d[slot],plan[slot]?.start||{x,y}))];
 }
 /** Fixed-step football simulation. Every result is resolved from these same replay frames. */
 export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDepth={},seed,spot=25,defensePlan={}}){
+ const eligibility=formationRules(play,offense,offDepth);
+ if((play.positions||play.reports)&&!eligibility.legal)throw Error(eligibility.errors.join(' '));
  const plan=normalizeDefense(defensePlan,spot);const rng=createRng(seed),people=lineup(play,coverage,offense,defense,offDepth,defDepth,plan,spot);
  const off=people.filter(p=>p.side==='offense'),def=people.filter(p=>p.side==='defense'),by=Object.fromEntries(off.map(p=>[p.slot,p]));
  for(const p of people){const execution=rng.fork(`execution/${p.side}/${p.slot}`);p.traits={...p.traits,topSpeed:p.traits.topSpeed*execution.range(.97,1.03),acceleration:p.traits.acceleration*execution.range(.95,1.05),reaction:p.traits.reaction*execution.range(.9,1.12)}}
  const origin=Object.fromEntries(people.map(p=>[p.slot,{x:p.x,y:p.y}]));
  // Re-anchor legacy saved routes to the current formation without changing the drawn destination.
  const paths=Object.fromEntries(Object.entries(play.routes||{}).filter(([s])=>by[s]).map(([s,pts])=>[s,[origin[s],...pts.slice(1).map(worldPoint)]]));
- const reads=progression(play),run=play.type==='run',runner=by[play.runner||'RB']||by.RB;
+ const reads=[...new Set([...progression(play),...eligibility.eligible])].filter(slot=>eligibility.eligible.includes(slot)),run=play.type==='run',runner=by[play.runner||'RB']||by.RB;
  const frames=[],events=[],engagements=new Map(),cooldown=new Map(),tackleCooldown=new Map();
  let t=0,phase='Snap',ball={...origin.C,z:.35},carrier=by.QB,flight=null,release=null,done=false,caught=false,handed=false,kind=run?'run':'incomplete',target=null,readIndex=-1,nextRead=0,readSince=0,pressureLogged=false,contact=null,catchTime=Infinity;
  const metrics={firstPressure:null,timeToThrow:null,blockedSeconds:0,blockWins:0,blockLosses:0,readWindows:[],maxSeparation:0};
  const event=(type,details={})=>events.push({t:+t.toFixed(2),type,...details});
  const pressureCall=rng.fork('pressure-call');const blitzSlots=pressureCall.chance(.4)?['LB1','LB3']:[pressureCall.pick(['LB1','LB2','LB3'])];
  const rushers=def.filter((p,i)=>plan[p.slot]?.type?plan[p.slot].type==='blitz':i<4||(coverage==='Blitz'&&blitzSlots.includes(p.slot)));
- const blockers=off.filter(p=>LINE.includes(p.slot)||(!run&&p!==by.QB&&paths[p.slot]&&paths[p.slot].at(-1).y<=origin[p.slot].y));
+ const blockers=off.filter(p=>p!==by.QB&&((run&&p!==runner)||(!eligibility.eligible.includes(p.slot)&&p!==runner)||(!run&&(!paths[p.slot]||paths[p.slot].at(-1).y<=origin[p.slot].y))));
  // One initial responsibility per blocker. The spare OL helps inside, then picks up leaks.
  const assignments=new Map(),claimed=new Set();
  for(const d of [...rushers].sort((a,b)=>Math.abs(b.x-26.65)-Math.abs(a.x-26.65))){const b=blockers.filter(b=>!assignments.has(b.slot)).sort((a,b)=>dist(a,d)-dist(b,d))[0];if(b){assignments.set(b.slot,d.slot);claimed.add(d.slot)}}
  for(const b of blockers.filter(b=>!assignments.has(b.slot))){const d=(run?def:rushers).filter(d=>!claimed.has(d.slot)).sort((a,c)=>dist(b,a)-dist(b,c))[0]||rushers.slice().sort((a,c)=>dist(b,a)-dist(b,c))[0];if(d){assignments.set(b.slot,d.slot);claimed.add(d.slot)}}
- const manAssignments=new Map(),uncovered=new Set(ELIGIBLE);
+ const manAssignments=new Map(),uncovered=new Set(eligibility.eligible);
  for(const d of def.filter(d=>!rushers.includes(d)).sort((a,b)=>a.slot.startsWith('CB')?-1:b.slot.startsWith('CB')?1:0)){
  const receiver=[...uncovered].map(s=>by[s]).sort((a,b)=>Math.abs(d.x-a.x)-Math.abs(d.x-b.x))[0];if(receiver){manAssignments.set(d.slot,receiver.slot);uncovered.delete(receiver.slot)}
  }
@@ -75,7 +78,7 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  for(const b of activeBlockers){if([...engagements.values()].some(e=>e.b===b))continue;
  let d=def.find(d=>d.slot===assignments.get(b.slot));
  if(!d||d.y<b.y-1.6||dist(b,d)>9||(!LINE.includes(b.slot)&&caught)){d=(caught?def:rushers).filter(d=>![...engagements.values()].some(e=>e.d===d)).sort((a,c)=>dist(b,a)-dist(b,c))[0]||d;if(d)assignments.set(b.slot,d.slot)}
- if(!d){steer(b,b,0);continue;}const mode=caught?'Run block':blockType(play,b.slot),forward=mode==='Run block';
+ if(!d){steer(b,b,0);continue;}const mode=caught||run?'Run block':!eligibility.eligible.includes(b.slot)?'Pass block':blockType(play,b.slot),forward=mode==='Run block';
  b.status=forward?'Run fit':'Pass set';
  const route=paths[b.slot],end=route?.at(-1);const lateral=end?clamp(end.x-origin[b.slot].x,-5,5):0;
  let goal=forward?{x:d.x+lateral*.2,y:d.y-.95}:{x:d.x*.72+by.QB.x*.28,y:Math.max(by.QB.y+2.3,Math.min(origin[b.slot].y-.65,d.y-1.05))};
@@ -123,7 +126,13 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  else if(caught&&p===carrier){p.status='Carry';if(t>= (p.nextVision||0)){p.runGoal=runnerGoal(p);p.nextVision=t+.16+(100-p.traits.vision)*.002}steer(p,p.runGoal,p.traits.topSpeed*.93,DT,false)}
 
  else if(flight&&p===target&&t>flight.start+.2&&flight.start+flight.duration-t<.5){p.status='Track ball';steer(p,flight.to,p.traits.topSpeed)}
- else {p.status=paths[p.slot]?'Route':'Release';if(t>.22)followRoute(p,paths[p.slot]||[origin[p.slot],{x:p.x,y:p.y+3}],p.traits.topSpeed*.93)}
+ else {
+ const releaseTime=.12+p.traits.reaction*.65+(p.slot==='TE'?.08:0);
+ if(t<releaseTime){p.status='Read snap';steer(p,p,0)}
+ else {const path=paths[p.slot];const atEnd=path&&dist(p,path.at(-1))<1;
+ p.status=atEnd?'Settle in window':p.waypoint>1?'Route break':'Route stem';
+ followRoute(p,path||[origin[p.slot],{x:p.x,y:p.y+3}],p.traits.topSpeed*(.86+p.traits.agility*.001));}
+ }
  }
  if(run&&handed&&runner===qb){qb.status='Carry';if(t>=(qb.nextVision||0)){qb.runGoal=runnerGoal(qb);qb.nextVision=t+.2}steer(qb,qb.runGoal,qb.traits.topSpeed*.93,DT,false)}
  // Defensive perception updates are delayed. Coverage players do not know the catch point instantly.
@@ -132,7 +141,15 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  const seesThrow=flight&&t>flight.start+d.traits.reaction;
  if(t>=(d.nextDecision||0)){
  let goal,pace=d.traits.topSpeed;
- if(observedRun||observedCatch){const lead=clamp(dist(d,carrier)/Math.max(1,d.traits.topSpeed)*.85+.15,0,1.4);goal={x:carrier.x+carrier.vx*lead,y:carrier.y+carrier.vy*lead};d.status='Pursuit';if(d.y>carrier.y+2&&dist(d,carrier)<7)pace=Math.min(pace,3+dist(d,carrier)*.45)}
+ if(observedRun||observedCatch){
+ const lead=clamp(dist(d,carrier)/Math.max(1,d.traits.topSpeed)*(.45+d.traits.vision*.005),0,1.4);
+ const closest=def.filter(o=>!held.has(o.slot)).sort((a,b)=>dist(a,carrier)-dist(b,carrier))[0];
+ const safety=d.slot.startsWith('S')&&d.y>carrier.y+5&&closest!==d;
+ const contain=!safety&&closest!==d&&Math.abs(d.x-carrier.x)>4;
+ goal={x:clamp(carrier.x+carrier.vx*lead+(contain?Math.sign(d.x-carrier.x)*2:0),.4,52.9),y:carrier.y+carrier.vy*lead+(safety?4:0)};
+ d.status=safety?'Safety support':contain?'Outside contain':'Pursuit';
+ if(d.y>carrier.y+2&&dist(d,carrier)<7)pace=Math.min(pace,3+dist(d,carrier)*.45);
+ }
  else if(seesThrow&&!rushers.includes(d)){const contest=flight.contesters.includes(d.slot)&&dist(d,flight.to)<Math.max(0,flight.start+flight.duration-t)*d.traits.topSpeed*.75+1;goal=contest?flight.to:{x:flight.to.x,y:Math.max(d.y,flight.to.y+(d.slot.startsWith('S')?4:2))};d.status=contest?'Break on ball':'Contain catch'}
  else if(plan[d.slot]?.type==='zone'||plan[d.slot]?.type==='blitz'){
  const assignment=plan[d.slot],route=[origin[d.slot],...(assignment.path||[]).slice(1)];d.defensiveWaypoint=d.defensiveWaypoint||1;
@@ -143,10 +160,15 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  d.status=assignment.type==='blitz'?'Blitz path':'Custom zone';
  }
  else if(plan[d.slot]?.type==='man'&&by[plan[d.slot].target]){const target=by[plan[d.slot].target];goal={x:target.x+target.vx*.25,y:target.y+target.vy*.25+1};d.status=`Man ${target.slot}`;}
- else if(rushers.includes(d)){goal={x:qb.x,y:qb.y};d.status='Rush';if(d.slot.startsWith('DE')&&t<1.15)goal={x:origin[d.slot].x+(d.x<26.65?-1:1),y:qb.y+1};}
+ else if(rushers.includes(d)){
+ const edge=d.slot.startsWith('DE'),outside=Math.sign(origin[d.slot].x-origin.C.x)||1;
+ const turnCorner=edge&&d.y>qb.y+1.5&&dist(d,qb)>3;
+ goal=turnCorner?{x:origin[d.slot].x+outside*(1+d.traits.agility/100),y:qb.y+1}:{x:qb.x+outside*(edge?.5:.2),y:qb.y};
+ d.status=turnCorner?'Edge rush':edge?'Close pocket':'Interior rush';
+ }
  else if(coverage==='Man'||coverage==='Blitz'){const assignment=by[manAssignments.get(d.slot)];if(assignment){goal={x:assignment.x+assignment.vx*.25,y:Math.max(origin[d.slot].y,assignment.y+assignment.vy*.25+1.5)};d.status=`Man ${assignment.slot}`}else{goal={x:26.65,y:Math.min(18,qb.y+23)};d.status='Deep help'}}
  else {const deep=coverage==='Cover 3'?['CB1','CB2','S1'].includes(d.slot):d.slot.startsWith('S');const zone={x:origin[d.slot].x,y:deep?18:6};
- const candidates=off.filter(p=>ELIGIBLE.includes(p.slot)&&Math.abs(p.x-zone.x)<(deep?12:9)&&p.y>(deep?6:-1)&&p.y<(deep?45:24));
+ const candidates=off.filter(p=>eligibility.eligible.includes(p.slot)&&Math.abs(p.x-zone.x)<(deep?12:9)&&p.y>(deep?6:-1)&&p.y<(deep?45:24));
  const match=candidates.sort((a,b)=>dist(a,zone)-dist(b,zone))[0];goal=match?{x:clamp(match.x,zone.x-7,zone.x+7),y:deep?Math.max(zone.y,match.y+2.5):clamp(match.y+Math.max(0,match.vy)*.35+3,origin[d.slot].y,28)}:zone;
  pace*=match?.98:.8;d.status=deep?'Deep zone':match&&match.y>8?'Carry seam':'Under zone';}
  reactionGoals.set(d.slot,{goal,pace});d.nextDecision=t+d.traits.reaction;
@@ -166,6 +188,22 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  const pressure=clamp((4.2-nearest)/3.2,0,1);
  if(!run&&!caught&&!flight){
  if(pressure>.25&&!pressureLogged){pressureLogged=true;metrics.firstPressure=t;event('Pressure')}
+ // A hot read can interrupt the drop/progression, but only into a clear window.
+ // Keep a real release interval so a rusher already in contact can still sack the QB.
+ if(pressure>.25&&t>.6+(100-qb.traits.vision)*.002&&nearest>=1.05){
+ const quickDelay=.14+(100-qb.traits.accuracy)*.001;
+ if(release){const window=windowFor(release.receiver);if(window.separation>2.2&&window.laneRisk<.25)release.at=Math.min(release.at,t+quickDelay)}
+ else for(const slot of reads){
+ const receiver=by[slot];if(!receiver||!paths[slot]||blockers.includes(receiver))continue;
+ const window=windowFor(receiver);
+ if(window.separation<=2.2||window.laneRisk>=.25||window.aim.y<receiver.y-.5)continue;
+ readIndex=reads.indexOf(slot);readSince=t;
+ metrics.maxSeparation=Math.max(metrics.maxSeparation,window.separation);
+ metrics.readWindows.push({slot,t,score:+window.score.toFixed(2)});
+ release={receiver,at:t+quickDelay};
+ event('Read',{slot,order:readIndex+1,hot:true});event('Set to throw',{to:slot,hot:true});break;
+ }
+ }
  if(nearest<1.05&&t>.65){kind='sack';carrier=qb;end('Sack',{by:free.slice().sort((a,b)=>dist(a,qb)-dist(b,qb))[0].slot})}
  else if(release&&t>=release.at){
  target=release.receiver;const window=windowFor(target),travel=window.travel;
@@ -216,6 +254,6 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  if(!done){end('Whistle');snapshot()}
  const outcome=kind==='sack'?by.QB:carrier||target||by.QB;const yards=kind==='incomplete'?0:clamp(Math.round(outcome.y),-spot,100-spot);
  metrics.blockWins=[...engagements.values()].length;
- return {kind,yards,playerId:outcome.id,playerName:outcome.name,qbName:by.QB.name,readOrder:Math.max(0,readIndex+1),targetSlot:target?.slot,frames,events,people:people.map(p=>({slot:p.slot,side:p.side,id:p.id,name:p.name,number:p.number,traits:p.traits})),duration:t,spot,coverage,metrics,modelVersion:2};
+ return {kind,yards,playerId:outcome.id,playerName:outcome.name,qbName:by.QB.name,readOrder:Math.max(0,readIndex+1),targetSlot:target?.slot,frames,events,people:people.map(p=>({slot:p.slot,side:p.side,id:p.id,name:p.name,number:p.number,traits:p.traits})),duration:t,spot,coverage,metrics,modelVersion:3};
 }
 export function interpolateFrame(frames,time){if(!frames?.length)return null;let i=Math.min(frames.length-1,Math.floor(time/.05));while(i<frames.length-1&&frames[i+1].t<=time)i++;const a=frames[i],b=frames[Math.min(i+1,frames.length-1)],f=clamp((time-a.t)/Math.max(.001,b.t-a.t),0,1);return {...a,players:a.players.map((p,j)=>({...p,x:p.x+(b.players[j].x-p.x)*f,y:p.y+(b.players[j].y-p.y)*f})),ball:{x:a.ball.x+(b.ball.x-a.ball.x)*f,y:a.ball.y+(b.ball.y-a.ball.y)*f,z:a.ball.z+(b.ball.z-a.ball.z)*f}};}

@@ -19,7 +19,13 @@ export function specialLineup(type,offense,defense,spot,depth={}){
  a.push(make('WL','offense',['TE','LB'],19.5,-2.5),make('WR','offense',['TE','LB'],33.8,-2.5));
  if(punt){a.push(make('GL','offense',['WR','DB'],5,-.75),make('GR','offense',['WR','DB'],48,-.75),make('PP','offense',['RB','LB'],28,-5),make('P','offense',['P'],26.65,-Math.min(14,spot+8)))}
  else a.push(make('H','offense',['P','QB'],26.65,-8),make('K','offense',['K'],23.5,-11));
- const count=punt?8:11;for(let i=0;i<count;i++)b.push(make(`D${i+1}`,'defense',['DL','LB','DB'],punt?18+i*2.5:16+i*2.1,i<7?1.1:4));
+ if(punt){for(let i=0;i<8;i++)b.push(make(`D${i+1}`,'defense',['DL','LB','DB'],18+i*2.5,i<7?1.1:4))}
+ else{
+  // Balanced kick-block front, with space over the snapper and one fake guard.
+  const gaps=[-9,-7.2,-5.4,-3.6,-1.8,1.8,3.6,5.4,7.2,9];
+  gaps.forEach((x,i)=>b.push(make(`D${i+1}`,'defense',i===0||i===9?['LB','DB']:['DL','LB'],26.65+x,1.1)));
+  b.push(make('D11','defense',['DB','LB'],26.65,5));
+ }
  if(punt)b.push(make('JL','defense',['DB'],5,1.5),make('JR','defense',['DB'],48,1.5),make('KR','defense',['WR','RB','DB'],26.65,Math.min(43,98-spot)));
  }
  return [...a,...b];
@@ -51,7 +57,7 @@ export function resolveSpecialTeams({state,type,offense,defense,seed,depth={}}){
  if(t>=kickAt&&!kickLogged){kickLogged=true;event(punt?'Punt':place?'Placekick':'Kickoff',{by:kicker.slot});kicker.status='Kick';if(!kickoff){const rusher=def.find(d=>distance(d,{x:26.65,y:launchY})<1.6);if(rusher){blocked=true;event('Kick blocked',{by:rusher.slot});landing.x=rusher.x;landing.y=rusher.y+2}}}
  if(kicked&&!carrier){const f=clamp((t-kickAt)/(blocked?.8:hang),0,1);phase='Kick in flight';ball={x:26.65+(landing.x-26.65)*f,y:launchY+(landing.y-launchY)*f,z:.4+Math.sin(Math.PI*f)*(place?Math.min(12,kickDistance*.23):punt?14:10)};if(place&&f>=1)ball.z=blocked||short?0:make?4.5:4;}
  if(!kickoff&&!landed){
- for(const d of def){if(held.has(d.slot)||d.slot==='KR')continue;if(punt&&['JL','JR'].includes(d.slot)){d.status='Jam gunner';steer(d,by[d.slot==='JL'?'GL':'GR'],d.traits.topSpeed)}else if(punt&&['D7','D8'].includes(d.slot)){d.status='Return setup';steer(d,{x:landing.x+(d.slot==='D7'?-4:4),y:landing.y-6},d.traits.topSpeed)}else{d.status='Rush';steer(d,{x:26.65,y:launchY},d.traits.topSpeed)}}
+ for(const d of def){if(held.has(d.slot)||d.slot==='KR')continue;if(place&&d.slot==='D11'){d.status=kicked?'Watch kick':'Guard fake';steer(d,origin[d.slot],0)}else if(place){const edge=['D1','D10'].includes(d.slot),outside=Math.sign(origin[d.slot].x-26.65);d.status=edge?'Edge rush':'Interior rush';const turn=edge&&d.y>-3;steer(d,turn?{x:26.65+outside*9,y:-4}:!edge&&d.y>-.5?{x:origin[d.slot].x,y:-2}:{x:26.65,y:launchY},d.traits.topSpeed)}else if(punt&&['JL','JR'].includes(d.slot)){d.status='Jam gunner';steer(d,by[d.slot==='JL'?'GL':'GR'],d.traits.topSpeed)}else if(punt&&['D7','D8'].includes(d.slot)){d.status='Return setup';steer(d,{x:landing.x+(d.slot==='D7'?-4:4),y:landing.y-6},d.traits.topSpeed)}else{d.status='Rush';steer(d,{x:26.65,y:launchY},d.traits.topSpeed)}}
  if(punt){for(const g of [by.GL,by.GR]){if(held.has(g.slot))continue;g.status='Gunner';steer(g,{x:g.slot==='GL'?landing.x-2:landing.x+2,y:landing.y},g.traits.topSpeed,DT,false)}}
  }
  // Dynamic kickoff lines remain set until the ball is touched or lands.
