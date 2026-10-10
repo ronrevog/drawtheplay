@@ -1,7 +1,10 @@
+import {defensivePackage,defensivePersonnel} from './defensivePlaybook.js';
+import {finishTurnover} from './turnoverReturn.js';
+import {depthStarters} from './depthChart.js';
 import {formationRules} from './offensiveFormation.js';
 import {normalizeDefense} from './defensivePlan.js';
-import {DT,distance as dist,footballTraits,steer,followRoute,separateBodies,segmentDistance} from './footballPhysics.js';
-import {FORMATIONS,offensiveAlignment,ELIGIBLE,fieldPlayers,orderedRoster} from './playbook.js';
+import {DT,distance as dist,footballTraits,steer,followRoute,advanceRoute,separateBodies,segmentDistance} from './footballPhysics.js';
+import {FORMATIONS,anchoredRoute,offensiveAlignment,ELIGIBLE,fieldPlayers,orderedRoster} from './playbook.js';
 import {createRng} from './engine/rng.ts';
 export const LINE=['LT','LG','C','RG','RT'];
 export const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -10,26 +13,27 @@ export const designPoint=({x,y})=>[clamp(x/53.3*100,0,100),clamp(60-y/.75,0,100)
 export function blockType(play,slot){const path=play.routes[slot];if(!path||path.length<2)return play.type==='run'?'Run block':'Pass block';return path.at(-1)[1]<=path[0][1]?'Run block':'Pass block';}
 export function progression(play){const valid=(play.reads||[play.target,...ELIGIBLE.filter(s=>s!==play.target)]).filter(s=>ELIGIBLE.includes(s));return [...new Set([...valid,...ELIGIBLE])];}
 export function defensiveAlignment(coverage){
+ const pack=defensivePackage(coverage);if(pack)return pack.positions;
  const front=[['DE1',21,1.1],['DT1',24.8,1.1],['DT2',28.5,1.1],['DE2',32.3,1.1]];
  const linebackers=coverage==='Blitz'?[['LB1',19,2],['LB2',27,4],['LB3',35,2]]:[['LB1',17,6],['LB2',27,7],['LB3',36,6]];
  const backs=coverage==='Man'?[['CB1',6,2],['CB2',47,2],['S1',19,10],['S2',36,11]]:coverage==='Cover 3'?[['CB1',8,9],['CB2',45,9],['S1',27,16],['S2',34,6]]:[['CB1',6,5],['CB2',47,5],['S1',16,15],['S2',38,15]];
  return [...front,...linebackers,...backs].map(([slot,x,y])=>({slot,x,y}));
 }
 export function lineup(play,coverage,offense,defense,offDepth={},defDepth={},defensePlan={},spot=25){
- const plan=normalizeDefense(defensePlan,spot);const f=fieldPlayers(offense,offDepth),order=orderedRoster(defense,defDepth);const get=(pos,n)=>order.filter(p=>p.position===pos)[n];const d={DE1:get('DL',0),DT1:get('DL',1),DT2:get('DL',2),DE2:get('DL',3),LB1:get('LB',0),LB2:get('LB',1),LB3:get('LB',2),CB1:get('DB',0),CB2:get('DB',1),S1:get('DB',2),S2:get('DB',3)};
- const make=(slot,side,p,xy)=>({slot,side,id:p?.id||`${side}-${slot}`,name:p?.name||slot,number:p?.number||slot,rating:p?.overall||60,traits:footballTraits(p,side==='offense'?(LINE.includes(slot)?'OL':slot.startsWith('WR')?'WR':slot):(slot.startsWith('D')?'DL':slot.startsWith('LB')?'LB':'DB')),vx:0,vy:0,distance:0,status:'Set',...xy});
+ const plan=normalizeDefense({...defensivePackage(coverage)?.plan,...defensePlan},spot);const f=fieldPlayers(offense,offDepth),d=defensivePersonnel(coverage,orderedRoster(defense,defDepth),depthStarters(defense,defDepth,'Defense'));
+ const make=(slot,side,p,xy)=>({slot,side,id:p?.id||`${side}-${slot}`,name:p?.name||slot,position:p?.position,number:p?.number||slot,rating:p?.overall||60,traits:footballTraits(p,side==='offense'?(LINE.includes(slot)?'OL':slot.startsWith('WR')?'WR':slot):(p?.position||(slot.startsWith('D')?'DL':slot.startsWith('LB')?'LB':'DB'))),vx:0,vy:0,distance:0,status:'Set',...xy});
  return [...offensiveAlignment(play).map(([slot,x,y])=>make(slot,'offense',f[slot],worldPoint([x,y]))),...defensiveAlignment(coverage).map(({slot,x,y})=>make(slot,'defense',d[slot],plan[slot]?.start||{x,y}))];
 }
 /** Fixed-step football simulation. Every result is resolved from these same replay frames. */
 export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDepth={},seed,spot=25,defensePlan={}}){
  const eligibility=formationRules(play,offense,offDepth);
  if((play.positions||play.reports)&&!eligibility.legal)throw Error(eligibility.errors.join(' '));
- const plan=normalizeDefense(defensePlan,spot);const rng=createRng(seed),people=lineup(play,coverage,offense,defense,offDepth,defDepth,plan,spot);
+ const plan=normalizeDefense({...defensivePackage(coverage)?.plan,...defensePlan},spot);const rng=createRng(seed),people=lineup(play,coverage,offense,defense,offDepth,defDepth,plan,spot);
  const off=people.filter(p=>p.side==='offense'),def=people.filter(p=>p.side==='defense'),by=Object.fromEntries(off.map(p=>[p.slot,p]));
  for(const p of people){const execution=rng.fork(`execution/${p.side}/${p.slot}`);p.traits={...p.traits,topSpeed:p.traits.topSpeed*execution.range(.97,1.03),acceleration:p.traits.acceleration*execution.range(.95,1.05),reaction:p.traits.reaction*execution.range(.9,1.12)}}
  const origin=Object.fromEntries(people.map(p=>[p.slot,{x:p.x,y:p.y}]));
- // Re-anchor legacy saved routes to the current formation without changing the drawn destination.
- const paths=Object.fromEntries(Object.entries(play.routes||{}).filter(([s])=>by[s]).map(([s,pts])=>[s,[origin[s],...pts.slice(1).map(worldPoint)]]));
+ // Translate saved routes with their release point so stale samples cannot pull players backward.
+ const paths=Object.fromEntries(Object.entries(play.routes||{}).filter(([s])=>by[s]).map(([s,pts])=>[s,anchoredRoute(play,s).map(worldPoint)]));
  const reads=[...new Set([...progression(play),...eligibility.eligible])].filter(slot=>eligibility.eligible.includes(slot)),run=play.type==='run',runner=by[play.runner||'RB']||by.RB;
  const frames=[],events=[],engagements=new Map(),cooldown=new Map(),tackleCooldown=new Map();
  let t=0,phase='Snap',ball={...origin.C,z:.35},carrier=by.QB,flight=null,release=null,done=false,caught=false,handed=false,kind=run?'run':'incomplete',target=null,readIndex=-1,nextRead=0,readSince=0,pressureLogged=false,contact=null,catchTime=Infinity;
@@ -48,7 +52,7 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  }
  for(const d of def){if(plan[d.slot]?.type==='man'&&by[plan[d.slot].target])manAssignments.set(d.slot,plan[d.slot].target)}
  const reactionGoals=new Map();
- function snapshot(){frames.push({t:+t.toFixed(2),phase,players:people.map(p=>({slot:p.slot,side:p.side,x:+p.x.toFixed(3),y:+p.y.toFixed(3),vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),status:p.status,assignment:assignments.get(p.slot)||manAssignments.get(p.slot)||null})),ball:{...ball},read:readIndex,carrier:carrier?.slot||null,blocks:[...engagements.values()].map(e=>({blocker:e.b.slot,defender:e.d.slot,mode:e.mode,advantage:+e.advantage.toFixed(2)}))})}
+ function snapshot(){frames.push({t:+t.toFixed(2),phase,players:people.map(p=>({slot:p.slot,side:p.side,x:+p.x.toFixed(3),y:+p.y.toFixed(3),vx:+p.vx.toFixed(2),vy:+p.vy.toFixed(2),status:p.status,animationHeading:p.status==='Throwing'&&flight?Math.atan2(flight.to.x-p.x,flight.to.y-p.y):undefined,assignment:assignments.get(p.slot)||manAssignments.get(p.slot)||null})),ball:{...ball},read:readIndex,carrier:carrier?.slot||null,blocks:[...engagements.values()].map(e=>({blocker:e.b.slot,defender:e.d.slot,mode:e.mode,advantage:+e.advantage.toFixed(2)}))})}
  function end(type,details={}){done=true;phase='Dead ball';event(type,details)}
  function predict(receiver,seconds){const path=paths[receiver.slot];if(!path)return {x:receiver.x+receiver.vx*seconds,y:receiver.y+receiver.vy*seconds};const projected={...receiver};for(let n=0;n<Math.ceil(seconds/DT);n++)followRoute(projected,path,receiver.traits.topSpeed*.93);return {x:projected.x,y:projected.y};}
  function windowFor(receiver){
@@ -60,7 +64,9 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  }
  function nearestThreat(p){return def.filter(d=>![...engagements.values()].some(e=>e.d===d)).sort((a,b)=>dist(a,p)-dist(b,p))[0]}
  function runnerGoal(p){
- const path=paths[p.slot],next=path?.[p.waypoint||1];
+ const path=paths[p.slot];
+ if(run&&path?.length){const target=advanceRoute(p,path);if(p.waypoint<path.length-1||dist(p,target)>1)return target;}
+ const next=path?.[p.waypoint||1];
  if(next&&dist(p,next)<1.4&&p.waypoint<path.length-1)p.waypoint++;
  const authored=path?.[p.waypoint||1];const forward=authored&&authored.y>p.y+.3?authored:{x:p.x,y:p.y+7};
  const desiredX=p.x+(forward.x-p.x)*Math.min(1,4/Math.max(.1,dist(p,forward)));
@@ -240,7 +246,7 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  ball={x:carrier.x,y:carrier.y,z:.4};
  if(spot+carrier.y>=100){carrier.y=100-spot;ball.y=carrier.y;end('Touchdown',{by:carrier.slot})}
  else if(carrier.x<=.2||carrier.x>=53.1){end('Out of bounds',{by:carrier.slot})}
- else if(contact){carrier.vx*=.7;carrier.vy*=.7;if(t>=contact.until){const forward=contact.forward;carrier.y=Math.max(carrier.y,forward);ball={x:carrier.x,y:carrier.y,z:0};if(rng.chance(clamp(.02-(carrier.traits.ballSecurity-60)*.0003,.004,.025))){kind='fumble';end('Fumble',{by:carrier.slot})}else end('Tackle',{by:contact.by})}}
+ else if(contact){carrier.vx*=.7;carrier.vy*=.7;if(t>=contact.until){const forward=contact.forward;carrier.y=Math.max(carrier.y,forward);ball={x:carrier.x,y:carrier.y,z:0};if(rng.chance(clamp(.035-(carrier.traits.ballSecurity-60)*.00045,.01,.045))){kind='fumble';end('Fumble',{by:carrier.slot})}else end('Tackle',{by:contact.by})}}
  else for(const d of free){if((tackleCooldown.get(d.slot)||0)>t||dist(d,carrier)>1.6)continue;
  const closing=Math.hypot(d.vx-carrier.vx,d.vy-carrier.vy),support=free.filter(o=>o!==d&&dist(o,carrier)<2.8).length;
  const chance=clamp(.64+(d.traits.tackling-carrier.traits.elusiveness)*.006+(d.traits.mass-carrier.traits.mass)*.001+support*.1-closing*.012,.25,.97);
@@ -254,6 +260,6 @@ export function resolveLivePlay({play,coverage,offense,defense,offDepth={},defDe
  if(!done){end('Whistle');snapshot()}
  const outcome=kind==='sack'?by.QB:carrier||target||by.QB;const yards=kind==='incomplete'?0:clamp(Math.round(outcome.y),-spot,100-spot);
  metrics.blockWins=[...engagements.values()].length;
- return {kind,yards,playerId:outcome.id,playerName:outcome.name,qbName:by.QB.name,readOrder:Math.max(0,readIndex+1),targetSlot:target?.slot,frames,events,people:people.map(p=>({slot:p.slot,side:p.side,id:p.id,name:p.name,number:p.number,traits:p.traits})),duration:t,spot,coverage,metrics,modelVersion:3};
+ return finishTurnover({kind,yards,playerId:outcome.id,playerName:outcome.name,qbName:by.QB.name,readOrder:Math.max(0,readIndex+1),targetSlot:target?.slot,frames,events,people:people.map(p=>({slot:p.slot,side:p.side,id:p.id,name:p.name,number:p.number,traits:p.traits})),duration:t,spot,coverage,metrics,modelVersion:3},rng.fork('turnover-return'));
 }
 export function interpolateFrame(frames,time){if(!frames?.length)return null;let i=Math.min(frames.length-1,Math.floor(time/.05));while(i<frames.length-1&&frames[i+1].t<=time)i++;const a=frames[i],b=frames[Math.min(i+1,frames.length-1)],f=clamp((time-a.t)/Math.max(.001,b.t-a.t),0,1);return {...a,players:a.players.map((p,j)=>({...p,x:p.x+(b.players[j].x-p.x)*f,y:p.y+(b.players[j].y-p.y)*f})),ball:{x:a.ball.x+(b.ball.x-a.ball.x)*f,y:a.ball.y+(b.ball.y-a.ball.y)*f,z:a.ball.z+(b.ball.z-a.ball.z)*f}};}

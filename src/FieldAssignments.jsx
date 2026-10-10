@@ -1,4 +1,4 @@
-import {offensiveAlignment} from './playbook.js';
+import {anchoredRoute} from './playbook.js';
 import React,{useId} from 'react';
 import {worldPoint,LINE,blockType} from './liveSimulation';
 
@@ -20,7 +20,7 @@ export function FieldAssignments({camera,size,play,frame,active,special,home,coa
  }
  return <svg className="field-assignment-ink" viewBox={`0 0 ${size.width} ${size.height}`} preserveAspectRatio="none" aria-hidden="true">
   <defs><marker id={`route-arrow-${id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 L3 5 Z" fill="context-stroke" stroke="context-stroke" strokeLinejoin="round"/></marker></defs>
-  {home&&Object.entries(play?.routes||{}).map(([slot,pts])=>route([offensiveAlignment(play).find(p=>p[0]===slot)?.slice(1)||pts[0],...pts.slice(1)].map(worldPoint),{key:slot,block:LINE.includes(slot),dashed:LINE.includes(slot),chosen:selected?.slot===slot,color:LINE.includes(slot)?blockType(play,slot)==='Run block'?'#ffba78':'#9dd9ff':slot===(play.reads?.[0]||play.target)?'#ff5252':'#b5de91',opacity:selected&&selected.slot!==slot?.5:1}))}
+  {home&&Object.entries(play?.routes||{}).map(([slot,pts])=>route(anchoredRoute(play,slot).map(worldPoint),{key:slot,block:LINE.includes(slot),dashed:LINE.includes(slot),chosen:selected?.slot===slot,color:LINE.includes(slot)?blockType(play,slot)==='Run block'?'#ffba78':'#9dd9ff':slot===(play.reads?.[0]||play.target)?'#ff5252':'#b5de91',opacity:selected&&selected.slot!==slot?.5:1}))}
   {!active&&!home&&Object.entries(defensePlan).map(([slot,a])=>{
    const player=frame.players.find(p=>p.side==='defense'&&p.slot===slot),target=frame.players.find(p=>p.side==='offense'&&p.slot===a.target);if(!player)return null;
    const pts=a.type==='man'&&target?[player,target]:a.path?.length?[player,...a.path.slice(1)]:[],end=pts.at(-1),center=end&&camera.point(end.x,end.y);

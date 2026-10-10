@@ -4,6 +4,7 @@ const reported=(v,suffix='')=>v===null||v===undefined?'Not reported':`${v}${suff
 function Facts({items}){return <dl className="profile-facts">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd className={value==='Not reported'?'unreported':''}>{value}</dd></div>)}</dl>}
 export function PlayerProfile({player:p,season,asOf}){
  const [year,setYear]=useState(String(season));const b=p.bio||{},c=p.combine||{},stats=p.seasonStats?.[year]||{};const age=ageAt(b.birthDate,asOf);const hasStats=Object.values(stats).some(v=>v!==null&&v!==undefined);const fmt=v=>v===null||v===undefined?'—':Number.isInteger(v)?v.toLocaleString():v.toFixed(1);
+ if(p.legend)return <div className="expanded-profile"><section className="profile-section"><div className="profile-section-heading"><h3>Legends edition</h3><span>CURATED GAME RATINGS</span></div><p>{p.archetype}</p><p className="profile-footnote">{p.ratingBasis} Cover art is a stylized illustration.</p><Facts items={Object.entries(p.attributes).map(([name,value])=>[name,`${value} / 99`])}/><p>Unlock this quarterback through his dedicated legend pack, sign him with team credits, and set him as your starting QB in Coach’s Office.</p></section></div>;
  const derived=[];
  if(p.position==='QB')derived.push(['Completion rate',rate(stats.completions,stats.attempts,100),'%'],['Yards / attempt',rate(stats.passing_yards,stats.attempts),'']);
  if(['RB','WR','QB'].includes(p.position))derived.push(['Yards / carry',rate(stats.rushing_yards,stats.carries),'']);

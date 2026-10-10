@@ -15,25 +15,26 @@ function clockAfter(s,elapsed){let next={...s,clock:Math.max(0,s.clock-elapsed)}
 export function simulateSnap(game,call={}){
  const before=game.state;if(before.phase==='GameOver')return game;
  const rng=createRng(`${game.seed}/${before.turn}`);const side=before.possession;const offense=side==='home'?game.home:game.away;const defense=side==='home'?game.away:game.home;
- const f=fieldPlayers(offense,side==='home'?game.depth:{}),qb=f.QB;const defensiveOrder=orderedRoster(defense,side==='away'?game.depth:{});const unit=(pos,n)=>defensiveOrder.filter(p=>p.position===pos).slice(0,n);const ownK=offense.find(p=>p.position==='K');const kicker={id:ownK?.id,kickPower:ownK?.overall||60,kickAccuracy:ownK?.overall||60};const returner={speed:average(defense.filter(p=>['RB','WR'].includes(p.position))),elusiveness:75};
- const play=side==='home'?(call.play||DEFAULT_PLAYS[0]):rng.pick(LIBRARY_PLAYS);if(!validPlay(play))throw Error('Invalid play definition.');
+ const f=fieldPlayers(offense,side==='home'?game.depth:(game.awayDepth||{})),qb=f.QB;const defensiveOrder=orderedRoster(defense,side==='away'?game.depth:(game.awayDepth||{}));const unit=(pos,n)=>defensiveOrder.filter(p=>p.position===pos).slice(0,n);const ownK=offense.find(p=>p.position==='K');const kicker={id:ownK?.id,kickPower:ownK?.overall||60,kickAccuracy:ownK?.overall||60};const returner={speed:average(defense.filter(p=>['RB','WR'].includes(p.position))),elusiveness:75};
+ const play=side==='home'||call.multiplayer?(call.play||DEFAULT_PLAYS[0]):rng.pick(LIBRARY_PLAYS);if(!validPlay(play))throw Error('Invalid play definition.');
  const coverage=call.coverage||rng.pick(DEFENSES);if(!DEFENSES.includes(coverage))throw Error('Choose a defensive call.');
- let action=side==='home'?(call.action||'snap'):'snap';if(side==='away'&&before.phase==='Scrimmage'&&before.down===4)action=fieldGoalDistance(before.yardLine,side)<=53?'fg':'punt';
+ let action=side==='home'||call.multiplayer?(call.action||'snap'):'snap';if(!call.multiplayer&&side==='away'&&before.phase==='Scrimmage'&&before.down===4)action=fieldGoalDistance(before.yardLine,side)<=53?'fg':'punt';
  let s=before,result,seconds=0,yards=0,text='',kind='',playerId=null,simulation=null;
  const special=before.phase==='Kickoff'?'kickoff':before.phase==='PAT'&&action!=='two'?'pat':before.phase==='Scrimmage'&&['fg','punt'].includes(action)?action:null;
- if(special){result=resolveSpecialTeams({state:before,type:special,offense,defense,seed:`${game.seed}/${before.turn}/special`,depth:side==='home'?game.depth:{}});s=result.state;simulation=result.simulation;seconds=result.seconds;text=result.text;kind='kick';}
+ if(special){result=resolveSpecialTeams({state:before,type:special,offense,defense,seed:`${game.seed}/${before.turn}/special`,depth:side==='home'?game.depth:(game.awayDepth||{}),defDepth:side==='away'?game.depth:(game.awayDepth||{})});s=result.state;simulation=result.simulation;seconds=result.seconds;text=result.text;kind='kick';}
  else if(before.phase==='PAT'){result=resolveTwoPoint(s,rng.chance(.45+(average(offense)-average(defense))*.005),0);s=result.state;text=`Two-point try ${s.score[side]>before.score[side]?'converted':'stopped'}`;kind='kick';}
  else{
-  simulation=resolveLivePlay({play,coverage,offense,defense,defensePlan:side==='away'?(call.defensePlan??game.defenseDraft):undefined,offDepth:side==='home'?game.depth:{},defDepth:side==='away'?game.depth:{},seed:`${game.seed}/${before.turn}/live`,spot:toOffenseYards(before.yardLine,side)});
+  simulation=resolveLivePlay({play,coverage,offense,defense,defensePlan:side==='away'?(call.defensePlan??game.defenseDraft):undefined,offDepth:side==='home'?game.depth:(game.awayDepth||{}),defDepth:side==='away'?game.depth:(game.awayDepth||{}),seed:`${game.seed}/${before.turn}/live`,spot:toOffenseYards(before.yardLine,side)});
   ({kind,yards,playerId}=simulation);
   text=kind==='run'?`${simulation.playerName} runs for ${yards} yards`:kind==='pass'?`${simulation.qbName} → ${simulation.playerName} · ${yards} yards · read ${simulation.readOrder}`:kind==='sack'?`${simulation.qbName} sacked for ${-yards} yards`:kind==='interception'?`Pass intercepted by ${simulation.playerName}`:kind==='fumble'?`${simulation.playerName} fumbles`: `Incomplete · ${coverage}`;
-  if(['interception','fumble'].includes(kind)){result=resolveTurnover(s,clamp(advanceBall(s.yardLine,side,yards),0,100),0,0);s=result.state;text=kind==='fumble'?`${simulation.playerName} fumbles · defense recovers`:text;}
+  if(['interception','fumble'].includes(kind)&&simulation.recoverySide!=='offense'){result=resolveTurnover(s,advanceBall(s.yardLine,side,simulation.recoveryY??yards),Math.max(0,simulation.returnYards||0),0,playerId);s=result.state;text=kind==='fumble'?`${simulation.fumblerName} fumbles · ${simulation.playerName} recovers`:text;text+=` · ${Math.round(simulation.returnYards||0)}-yard return`;if(result.outcome==='ReturnTouchdown')text+=' · TOUCHDOWN!';}
+  else if(kind==='fumble'){const downs=resolveDowns(s,yards);s=downs.kind==='Touchdown'?scoreTouchdown(s,side,0,playerId).state:downs.kind==='Safety'?scoreSafety(s,side,0).state:{...s,...downs.next};text=`${simulation.fumblerName} fumbles · offense recovers${downs.kind==='Touchdown'?' · TOUCHDOWN!':''}`;}
   else{const downs=resolveDowns(s,yards);yards=downs.yards;if(downs.kind==='Touchdown'){s=scoreTouchdown(s,side,0,playerId).state;text+= ' · TOUCHDOWN!';}else if(downs.kind==='Safety'){s=scoreSafety(s,side,0).state;text+=' · SAFETY';}else{s={...s,...downs.next};if(downs.kind==='FirstDown')text+=' · first down';if(downs.kind==='TurnoverOnDowns')text+=' · turnover on downs';}}
   const stopped=['incomplete','interception','fumble'].includes(kind)||simulation.events.at(-1)?.type==='Out of bounds';
   seconds=Math.ceil(simulation.duration)+(stopped?0:rng.int(16,25));
  }
  if(game.timeoutPending&&before.phase==='Scrimmage')seconds=Math.min(seconds,simulation?Math.ceil(simulation.duration):8);
- const boxScore=recordSnap(game.boxScore,{before,after:s,simulation,play,kind,yards});
+ const boxScore=recordSnap(game.boxScore,{before,after:s,simulation,play,kind,yards:simulation?.kind==='fumble'?simulation.offensiveYards:yards});
  s=clockAfter({...s,turn:before.turn+1},seconds);
  const event={turn:before.turn,quarter:before.quarter,clock:before.clock,side,kind,text,yards,playerId,playName:play.name,play:structuredClone(play),coverage,spot:toOffenseYards(before.yardLine,side),afterSpot:toOffenseYards(s.yardLine,s.possession),score:{...s.score}};
  return {...game,boxScore,timeoutPending:false,state:s,last:{...event,simulation},log:[event,...game.log],completed:s.phase==='GameOver'};

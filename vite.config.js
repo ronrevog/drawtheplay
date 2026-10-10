@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 
 // Optional user-owned reference art is served only by the local development
 // server. Nothing from reference-analysis is copied into production builds.
-export default defineConfig({plugins:[{
+export default defineConfig({server:{proxy:{'/api':{target:'http://127.0.0.1:8787',changeOrigin:true,configure(proxy){proxy.on('proxyReq',(out,req)=>{if(req.headers.origin)out.setHeader('Origin','http://127.0.0.1:8787')})}}}},plugins:[{
  name:'local-football-reference',apply:'serve',
  configureServer(server){
   const files={

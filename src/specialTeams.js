@@ -1,3 +1,4 @@
+import {depthStarters} from './depthChart.js';
 import {createRng} from './engine/rng.ts';
 import {footballTraits,steer,distance,DT,clamp,separateBodies} from './footballPhysics.js';
 import {orderedRoster} from './playbook.js';
@@ -5,9 +6,10 @@ import {toOffenseYards,fromOffenseYards,otherSide} from './engine/field.ts';
 import {newSeries} from './engine/rules/downs.ts';
 import {addPoints,toKickoff,scoreTouchdown,fieldGoalProbability} from './engine/rules/scoring.ts';
 export const SPECIAL_PLAYS=[{id:'kickoff',name:'Dynamic kickoff',description:'Landing-zone kick · coverage and return'},{id:'punt',name:'Punt',description:'Long snap · protection · gunners and return'},{id:'fg',name:'Field goal',description:'Snap · hold · placekick'},{id:'pat',name:'Extra point',description:'15-yard snap · 33-yard attempt'}];
-export function specialLineup(type,offense,defense,spot,depth={}){
+export function specialLineup(type,offense,defense,spot,depth={},defDepth={}){
+ const specialists={offense:depthStarters(offense,depth,'Special teams'),defense:depthStarters(defense,defDepth,'Special teams')};const reserved=new Set(Object.entries(specialists).flatMap(([side,unit])=>Object.entries(unit).filter(([slot])=>side==='defense'?slot===(type==='punt'?'PR':'KR'):['K','P','LS','H'].includes(slot)).map(([,p])=>`${side}/${p.id}`)));
  const used=new Set();const rosters={offense:orderedRoster(offense,depth),defense:orderedRoster(defense)};
- function make(slot,side,positions,x,y){const list=rosters[side];const p=list.find(p=>positions.includes(p.position)&&!used.has(`${side}/${p.id}`))||list.find(p=>!used.has(`${side}/${p.id}`));if(p)used.add(`${side}/${p.id}`);return {slot,side,id:p?.id||`${side}-${slot}`,name:p?.name||slot,number:p?.number||slot,traits:footballTraits(p,p?.position||'LB'),rating:p?.overall||65,x,y,vx:0,vy:0,status:'Set'};}
+ function make(slot,side,positions,x,y){const list=rosters[side];const preferred=specialists[side][slot==='KR'&&type==='punt'?'PR':slot];const p=(preferred&&!used.has(`${side}/${preferred.id}`)?preferred:null)||list.find(p=>positions.includes(p.position)&&!used.has(`${side}/${p.id}`)&&!reserved.has(`${side}/${p.id}`))||list.find(p=>!used.has(`${side}/${p.id}`)&&!reserved.has(`${side}/${p.id}`));if(p)used.add(`${side}/${p.id}`);return {slot,side,id:p?.id||`${side}-${slot}`,name:p?.name||slot,number:p?.number||slot,traits:footballTraits(p,p?.position||'LB'),rating:p?.overall||65,x,y,vx:0,vy:0,status:'Set'};}
  const a=[],b=[];const unit=['WR','RB','TE','LB','DB'];
  if(type==='kickoff'){
  a.push(make('K','offense',['K'],24, -3));for(let i=0;i<10;i++)a.push(make(`C${i+1}`,'offense',unit,3+i*5.25,60-spot));
@@ -30,9 +32,9 @@ export function specialLineup(type,offense,defense,spot,depth={}){
  }
  return [...a,...b];
 }
-export function resolveSpecialTeams({state,type,offense,defense,seed,depth={}}){
+export function resolveSpecialTeams({state,type,offense,defense,seed,depth={},defDepth={}}){
  const rng=createRng(seed),kickoff=type==='kickoff',punt=type==='punt',place=!kickoff&&!punt;
- const spot=type==='pat'?85:toOffenseYards(state.yardLine,state.possession),people=specialLineup(type,offense,defense,spot,depth),off=people.filter(p=>p.side==='offense'),def=people.filter(p=>p.side==='defense');
+ const spot=type==='pat'?85:toOffenseYards(state.yardLine,state.possession),people=specialLineup(type,offense,defense,spot,depth,defDepth),off=people.filter(p=>p.side==='offense'),def=people.filter(p=>p.side==='defense');
  const by=Object.fromEntries(people.map(p=>[p.slot,p])),kicker=by[punt?'P':'K'],returner=by.KR,origin=Object.fromEntries(people.map(p=>[p.slot,{x:p.x,y:p.y}]));
  const kickAt=kickoff?1.05:punt?2.05:1.25,launchY=kickoff?0:punt?origin.P.y:-8;
  const kickDistance=110-spot-launchY,ratings={kickPower:kicker.rating,kickAccuracy:kicker.rating};

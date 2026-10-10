@@ -1,3 +1,4 @@
+import {LEGEND_PLAYERS} from './legendPlayers.js';
 export const DT=.05;
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -15,7 +16,8 @@ export function footballTraits(p={},position='WR'){
  blocking:rating(position==='OL'?4:position==='TE'?-4:-15),rush:rating(position==='DL'?3:0),
  coverage:rating(position==='DB'?3:position==='LB'?-5:-18),catching:rating(position==='WR'?4:position==='DB'?-15:0),
  tackling:rating(position==='DB'?-3:3),vision:rating(Math.min(5,(p.experience||0)*.45)),accuracy:rating(0),
- reaction:clamp(.43-(overall-60)*.005,.19,.55),ballSecurity:rating(3),elusiveness:agility};
+ reaction:clamp(.43-(overall-60)*.005,.19,.55),ballSecurity:rating(3),elusiveness:agility,
+ ...(LEGEND_PLAYERS.find(legend=>legend.id===p.id)?.legendTraits||{})};
 }
 export function steer(p,target,maxSpeed,dt=DT,arrive=true){
  const dx=target.x-p.x,dy=target.y-p.y,d=Math.hypot(dx,dy);const stop=Math.sqrt(Math.max(0,2*p.traits.acceleration*d));
@@ -26,14 +28,20 @@ export function steer(p,target,maxSpeed,dt=DT,arrive=true){
 }
 export function routeLength(path){return path.slice(1).reduce((sum,b,i)=>sum+distance(path[i],b),0)}
 export function alongRoute(path,travel){let left=travel;for(let i=1;i<path.length;i++){const len=distance(path[i-1],path[i]);if(left<=len){const f=left/Math.max(.001,len);return {x:path[i-1].x+(path[i].x-path[i-1].x)*f,y:path[i-1].y+(path[i].y-path[i-1].y)*f}}left-=len}return path.at(-1)}
+export function advanceRoute(p,path){
+ p.waypoint=Math.max(1,p.waypoint||1);
+ while(p.waypoint<path.length-1){const a=path[p.waypoint-1],b=path[p.waypoint],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);const passed=len<.01||((p.x-b.x)*dx+(p.y-b.y)*dy>=0&&segmentDistance(p,a,b).distance<2);
+ if(distance(p,b)>.65&&!passed)break;p.waypoint++;
+ }
+ return path[Math.min(p.waypoint,path.length-1)];
+}
 export function followRoute(p,path,speed){
  if(!path?.length){steer(p,p,0);return}
- p.waypoint=p.waypoint||1;
- while(p.waypoint<path.length-1&&distance(p,path[p.waypoint])<.9)p.waypoint++;
- const target=path[Math.min(p.waypoint,path.length-1)];
- let pace=speed;if(p.waypoint<path.length-1){const next=path[p.waypoint+1],d=distance(p,target),v=Math.hypot(p.vx,p.vy);const dot=((target.x-p.x)*(next.x-target.x)+(target.y-p.y)*(next.y-target.y))/Math.max(.01,d*distance(target,next));if(dot<.7&&d<Math.max(1.5,v*.28))pace*=.55+p.traits.agility*.003;}
- steer(p,target,pace);
+ const target=advanceRoute(p,path),final=p.waypoint>=path.length-1;
+ // Only brake at the route endpoint, never at every sample from the mouse.
+ steer(p,target,speed,DT,final);
 }
+
 export function separateBodies(people,engaged){
  for(let pass=0;pass<2;pass++)for(let i=0;i<people.length;i++)for(let j=i+1;j<people.length;j++){
  const a=people[i],b=people[j];if(engaged.has(`${a.slot}/${b.slot}`)||engaged.has(`${b.slot}/${a.slot}`))continue;

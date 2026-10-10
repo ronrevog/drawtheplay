@@ -11,6 +11,36 @@ npm run dev -- --port 5173
 
 Open http://127.0.0.1:5173. `npm run build` produces a static site in `dist/`. `npm test` checks the catalog, roster economy, simulation, special teams, persistent statistics, achievements, and screen rendering.
 
+### Optional local player animations
+
+The animated reference players are not included in Git or ordinary production builds.
+The explicit Cloudflare deployment build includes the two restored renderer assets.
+To restore them from your local Football Pro 96 installer ZIP, install Pillow
+in your Python environment and run:
+
+```sh
+python scripts/restore_local_players.py "path/to/Front-Page-Sports-Football-Pro-96-Season_DOS_EN_Installer.zip"
+```
+
+This reads only `ANIM.DAT` and `FILE.DAT` from the archive; it does not execute
+the installer. It validates and restores the 13 sequences used by the renderer
+to `../reference-analysis/fps-decoded.json` and `fps-sprite-atlas.png`.
+The development server serves that sibling folder. Reload the browser after
+restoring it, since missing artwork is cached for the page session. Without
+these files, the renderer uses its original fallback figures.
+
+Player uniforms use explicit material channels for primary jersey/helmet,
+secondary pants, and tertiary trim, with exposed skin kept separate. The
+headshot-derived complexion map in `src/player-appearance.json` is keyed by
+player ID, so the same player keeps their appearance across formations and
+teams. It estimates visible cheek color, not race or ethnicity. Lighting and
+photo quality can affect estimates; unresolved photos use a neutral placeholder.
+Rebuild it with `python scripts/build_player_appearance.py` (Pillow, NumPy,
+OpenCV required). Source photos, a visual review sheet and unresolved IDs remain
+in ignored `cache/appearance/`. An explicit `skinTone` on render metadata can
+override an estimate. Existing games retain their saved franchise palette;
+new games use the currently selected identity.
+
 ## Implemented
 
 - All 2,997 identified player records retained, including reserve/cut/practice statuses.
@@ -103,3 +133,46 @@ Original teams: Wildcats, Sabers, Orcas, Knights, Reds, Thunderbirds, Copperhead
 | Krakens | #38274A | #24A5A1 | #D9C5F1 |
 | Roadrunners | #D45B2A | #25495E | #F7DEAD |
 | Monarchs | #652C70 | #E1B950 | #F1E5D5 |
+
+The local restoration also extracts the original laced football from the game gadget artwork. Flight rendering rotates it to the projected travel direction with a subtle spin; native ball-carrying player animations suppress the separate ball overlay. This is renderer animation of the extracted artwork, not a recovered standalone ball animation sequence.
+
+## Cloudflare deployment
+
+`npm run deploy` builds the game, copies the restored player atlas and manifest from
+`../reference-analysis/` into the ignored `dist/local-reference/` directory, and
+publishes the static app using `wrangler.jsonc`. Restore those assets first;
+publication fails if they are missing. The installer and other analysis files are
+never uploaded. Cloudflare authentication is managed by Wrangler outside the repo.
+Saves remain browser-local: export a backup from localhost and import it on the
+public domain to move an existing franchise.
+
+The Cloudflare Worker is `playcall-football`, with routes for
+`playcallfootball.com/*` and `www.playcallfootball.com/*`. These routes serve
+static assets on the zone's proxied DNS records. Domain activation requires
+GoDaddy nameservers `patrick.ns.cloudflare.com` and `yolanda.ns.cloudflare.com`.
+Temporary hosting is https://playcall-football.sloptvedits.workers.dev.
+
+## Firebase phone accounts
+
+The web app uses the existing `draw-the-play-football` Firebase project. The header's
+Sign in button supports US SMS verification with Firebase reCAPTCHA and persistent
+Firebase sessions. The player must consent before requesting a code. Firebase Auth
+holds the phone number; private `playcallProfiles/{uid}` documents contain only a
+display name and server update timestamp. Existing `/users` rules belong to the
+native app and were preserved. Do not put private profile data in that collection.
+
+Accounts are optional for local play. Signing in does not upload, replace, or
+synchronize the browser-local franchise. Friend matches are saved separately on the server; the local franchise remains
+on this browser. See docs/multiplayer.md for multiplayer setup and limits. Game notification consent is separate and is not requested here.
+
+Phone provider enabled; SMS region allowlist: US. Authorized game domains:
+playcallfootball.com, www.playcallfootball.com, playcall-football.sloptvedits.workers.dev.
+The existing Firebase hosting domains and localhost authorization were retained.
+No production test numbers or verification bypasses are configured by this change.
+Real SMS delivery requires a user-driven verification on the hosted domain.
+
+Deploy rules with `firebase deploy --only firestore:rules --project draw-the-play-football`.
+`node scripts/check-profile-rules.cjs` checks ten mocked authorization cases through
+the Firebase Rules testing API (no database documents are written). It uses the
+signed-in Firebase CLI account; override FIREBASE_TOOLS_LIB for a non-Windows CLI.
+Normal phone-input and message tests run in `npm test`.

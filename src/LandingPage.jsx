@@ -1,0 +1,56 @@
+import {ArrowUpRight,ArrowDown,Play,Pause,Volume2,VolumeX} from 'lucide-react';
+import React,{useEffect,useRef,useState} from 'react';
+import {onAuthStateChanged} from 'firebase/auth';
+import {auth} from './firebase';
+import {PhoneAccount} from './PhoneAccount';
+import './landing.css';
+
+export function SiteEntry({Game}){
+ const [user,setUser]=useState(null),[ready,setReady]=useState(false),[inGame,setInGame]=useState(location.pathname==='/play'),[request,setRequest]=useState(0);
+ useEffect(()=>onAuthStateChanged(auth,u=>{setUser(u);setReady(true)}),[]);
+ useEffect(()=>{const pop=()=>setInGame(location.pathname==='/play');window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop)},[]);
+ function enter(){history.pushState({},'','/play'+(new URLSearchParams(location.search).get('invite')?'?invite='+encodeURIComponent(new URLSearchParams(location.search).get('invite')):''));setInGame(true);window.scrollTo(0,0)}
+ function play(){if(user)enter();else setRequest(n=>n+1)}
+ // Firebase restores persisted sessions asynchronously. Do not mount the public
+ // landing page (or its media) until that first auth result has arrived.
+ if(!ready)return <div className="pc-session-loading" role="status" aria-live="polite">Opening Playcall Football…</div>;
+ if(user&&inGame)return <Game/>;
+ return <><LandingPage onPlay={play} ready={ready} signedIn={!!user}/><PhoneAccount hideTrigger openRequest={request} onAuthenticated={enter}/></>;
+}
+
+const heroScenes=[
+ 'Red-team quarterback under stadium lights',
+ 'White-and-green team player ready for kickoff',
+ 'Red-team player at the line of scrimmage',
+ 'White-and-green quarterback reading the field',
+ 'Red-team receiver reaching for a pass',
+ 'White-and-green ball carrier following his blockers',
+ 'Red-team offense moving downfield',
+ 'White-and-green receiver contesting a pass'
+];
+function HeroSlideshow(){
+ const [slide,setSlide]=useState(0),[paused,setPaused]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
+ useEffect(()=>{const media=matchMedia('(prefers-reduced-motion: reduce)');const change=()=>{if(media.matches)setPaused(true)};media.addEventListener('change',change);return()=>media.removeEventListener('change',change)},[]);
+ useEffect(()=>{if(paused)return;const timer=setInterval(()=>{if(!document.hidden)setSlide(n=>(n+1)%heroScenes.length)},5000);return()=>clearInterval(timer)},[paused]);
+ return <><div className="pc-hero-slides" aria-label="Football highlights">{heroScenes.map((alt,i)=><img key={alt} className={`pc-hero-image ${slide===i?'is-active':''}`} src={`/landing/hero-${i+1}.jpg`} alt={slide===i?alt:''} aria-hidden={slide!==i} fetchPriority={i===0?'high':'low'} decoding={i===0?'auto':'async'}/>)}</div><div className="pc-slideshow-controls" aria-label="Hero slideshow controls"><button className="pc-slide-pause" onClick={()=>setPaused(p=>!p)} aria-label={paused?'Play slideshow':'Pause slideshow'}>{paused?<Play size={18} aria-hidden="true"/>:<Pause size={18} aria-hidden="true"/>}</button><div className="pc-slide-dots">{heroScenes.map((alt,i)=><button key={alt} aria-label={`Show image ${i+1}: ${alt}`} aria-pressed={slide===i} onClick={()=>{setSlide(i);setPaused(true)}}><span/></button>)}</div><span className="pc-slide-count" aria-hidden="true">{String(slide+1).padStart(2,'0')} / 08</span></div></>;
+}
+
+function LandingPage({onPlay,ready,signedIn}){
+ const video=useRef();const [muted,setMuted]=useState(true),[playing,setPlaying]=useState(false),[videoError,setVideoError]=useState(false);
+ const cta=signedIn?'Play now':'Sign in to play';
+ function watch(){document.getElementById('trailer').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});video.current?.play().catch(()=>setPlaying(false))}
+ function toggleSound(){const next=!muted;setMuted(next);video.current.muted=next}
+ return <div className="pc-landing" id="top">
+  <a className="pc-skip" href="#overview">Skip to game information</a>
+  <header className="pc-header"><a href="/" aria-label="Playcall Football home"><img src="/playcall-football-logo-v4.png" alt="Playcall Football" width="2172" height="724"/></a><nav aria-label="Site navigation"><a href="#overview">The game</a><a href="#trailer">Watch trailer</a><a href="#features">Features</a></nav><button className="pc-button" onClick={onPlay} disabled={!ready}>{ready?cta:'Loading…'} <ArrowUpRight size={20} aria-hidden="true"/></button></header>
+  <main>
+   <section className="pc-hero" aria-labelledby="hero-title"><HeroSlideshow/><div className="pc-hero-shade"/><div className="pc-hero-copy"><p className="pc-kicker">THE FIELD IS YOURS.</p><h1 id="hero-title">YOUR TEAM.<br/><em>YOUR CALL.</em></h1><p className="pc-intro">Build your roster. Draw your plays.<br/>Own the field.</p><div className="pc-actions"><button className="pc-button" disabled={!ready} onClick={onPlay}>{cta} <ArrowUpRight size={20} aria-hidden="true"/></button><button className="pc-button pc-outline" onClick={watch}><Play size={20} aria-hidden="true"/> Watch trailer</button></div><p className="pc-platform">PLAY IN YOUR BROWSER · DESKTOP & MOBILE</p></div><a className="pc-explore" href="#overview">Discover Playcall <ArrowDown size={16} aria-hidden="true"/></a><span className="pc-hero-note">Cinematic artwork</span></section>
+   <div className="pc-strip"><span>BUILD THE ROSTER</span><b>×</b><span>DRAW THE ROUTES</span><b>×</b><span>CALL THE GAME</span></div>
+   <section className="pc-overview pc-section" id="overview"><p className="pc-kicker">FOOTBALL. FROM YOUR SIDE OF THE CLIPBOARD.</p><h2>DON’T JUST PICK A PLAY.<br/><em>MAKE THE PLAY.</em></h2><p>Take control from the front office to the line of scrimmage. Assemble your team, set your starters, and draw the routes that turn your football instincts into a game plan.</p></section>
+   <section className="pc-section pc-trailer" id="trailer" aria-labelledby="trailer-title"><div className="pc-section-heading"><div><p className="pc-kicker">LIGHTS ON. GAME ON.</p><h2 id="trailer-title">THIS IS PLAYCALL.</h2></div><span>THE TRAILER / 00:45</span></div><div className="pc-video-wrap"><video ref={video} controls playsInline preload="none" poster="/landing/hero.jpg" muted={muted} onVolumeChange={e=>setMuted(e.currentTarget.muted||e.currentTarget.volume===0)} onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onEnded={()=>setPlaying(false)} onError={()=>setVideoError(true)} aria-label="Playcall Football cinematic trailer"><source src="/landing/trailer-v3.mp4" type="video/mp4"/></video>{!playing&&<button className="pc-video-play" onClick={watch} aria-label="Play trailer"><Play size={32} aria-hidden="true"/></button>}<button className="pc-sound" onClick={toggleSound} aria-pressed={!muted}>{muted?'SOUND OFF':'SOUND ON'} {muted?<VolumeX size={16} aria-hidden="true"/>:<Volume2 size={16} aria-hidden="true"/>}</button></div>{videoError&&<p role="alert">The video could not load. <a href="/landing/trailer-v3.mp4">Open the trailer directly.</a></p>}<p className="pc-caption">Cinematic trailer. See actual gameplay below.</p></section>
+   <section className="pc-features pc-section" id="features" aria-labelledby="features-title"><p className="pc-kicker">YOUR FRANCHISE. EVERY DETAIL.</p><h2 id="features-title">BUILT FOR THE PLAYCALLER.</h2><article className="pc-feature"><div className="pc-feature-image"><img src="/landing/gameplay-all22.png" alt="Actual All-22 play view showing all players and drawn routes on the football field" loading="lazy" width="1139" height="670"/><span>IN-GAME SCREENSHOT</span></div><div className="pc-feature-copy"><p className="pc-number">01 / THE PLAYBOOK</p><h3>DRAW IT.<br/>THEN RUN IT.</h3><p>Put your routes on the field with a mouse or your finger. Build a custom playbook, set your reads, and watch your assignments come to life.</p><ul><li>Custom routes and formations</li><li>All-22 view of the entire formation</li><li>Touch-friendly play drawing</li></ul></div></article><article className="pc-feature pc-reverse"><div className="pc-feature-image"><img src="/landing/franchise.webp" alt="Playcall franchise dashboard with team budget, roster, and coaching office" loading="lazy" width="1230" height="823"/><span>IN-GAME SCREENSHOT</span></div><div className="pc-feature-copy"><p className="pc-number">02 / THE FRONT OFFICE</p><h3>YOUR ROSTER.<br/>YOUR IDENTITY.</h3><p>Recruit from a real-player catalog, work within your team budget, and build a franchise that plays your way. Make the decisions before the whistle.</p><ul><li>Position-by-position depth charts</li><li>Custom team identity and colors</li><li>Career stats and game history</li></ul></div></article><article className="pc-feature"><div className="pc-feature-image"><img src="/landing/legends.webp" alt="Legend scouting packs featuring Dan Marino, Joe Montana, Brett Favre, and Peyton Manning" loading="lazy" width="1230" height="960"/><span>IN-GAME SCREENSHOT</span></div><div className="pc-feature-copy"><p className="pc-number">03 / THE LEGENDS</p><h3>GREATNESS.<br/>IN YOUR HUDDLE.</h3><p>Build around a legendary quarterback. Discover special packs for Dan Marino, Joe Montana, Brett Favre, Peyton Manning, and Jim Kelly.</p><ul><li>Playable legend quarterbacks</li><li>Scouting-token unlocks</li><li>Recruit with team credits</li></ul></div></article></section>
+   <section className="pc-details pc-section"><div><p className="pc-kicker">BEFORE KICKOFF</p><h2>THE GAME PLAN.</h2></div><div className="pc-faq"><details><summary>How do I start playing?</summary><p>Sign in with a US mobile number and verify your text-message code. Then enter your franchise, recruit your roster, and head to practice.</p></details><details><summary>Can I play on my phone?</summary><p>Yes. Play in your browser on mobile or desktop. Use your finger to draw routes and collapse the game controls for more field space.</p></details><details><summary>Where is my progress saved?</summary><p>Your franchise saves in this browser on this device. Use Export team to keep a backup. Local franchise progress does not sync between devices. Friend matches are saved online and follow your account.</p></details><details><summary>What modes are available?</summary><p>Build a franchise, manage players and custom plays, and play practice games against the computer. Challenge a friend in asynchronous multiplayer: both players lock in calls, and each play resolves when both are ready.</p></details></div></section>
+   <section className="pc-final"><p className="pc-kicker">THE NEXT GREAT PLAY STARTS WITH YOU.</p><h2>TAKE THE FIELD.</h2><button className="pc-button" disabled={!ready} onClick={onPlay}>{cta} <ArrowUpRight size={20} aria-hidden="true"/></button><p>US phone sign-in · No download required</p></section>
+  </main><footer className="pc-footer"><img src="/playcall-football-logo-v4.png" alt="Playcall Football" width="2172" height="724"/><p>Independent football game. Not affiliated with the NFL, NFLPA, or EA Sports.<br/>Player ratings are game estimates. Franchise progress is saved on your device.</p><a href="#top">Back to top ↑</a></footer>
+ </div>;
+}

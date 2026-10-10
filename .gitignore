@@ -7,6 +7,9 @@ cache/
 !.env.example
 *.log
 coverage/
+__pycache__/
 public/local-reference/
 all22-check.html
 src/all22-check.jsx
+
+.wrangler/

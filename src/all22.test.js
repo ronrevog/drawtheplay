@@ -29,3 +29,27 @@ test('drawing coordinates invert the camera at every zoom and pan',()=>{
   for(const p of [{x:3,y:-5},{x:26.65,y:0},{x:48,y:17}]){const screen=camera.point(p.x,p.y),q=camera.world(screen.x,screen.y);assert.ok(Math.abs(q.x-p.x)<1e-8);assert.ok(Math.abs(q.y-p.y)<1e-8)}
  }
 });
+
+test('phone play view uses field width without empty sideline gutters',()=>{
+ const camera=all22Camera([{players:[{x:4,y:-8},{x:49,y:22}]}],390,695);
+ assert.ok(camera.point(0,0).x<=5);
+ assert.ok(camera.point(53.3,0).x>=385);
+ for(const p of [{x:4,y:-8},{x:49,y:22}]){const screen=camera.point(p.x,p.y),world=camera.world(screen.x,screen.y);assert.ok(Math.abs(world.x-p.x)<1e-8);assert.ok(Math.abs(world.y-p.y)<1e-8)}
+});
+
+import {ballFollowCamera,broadcastCamera} from './all22.js';
+test('zoom tracking centers traveling and airborne balls with an invertible field projection',()=>{
+ const frames=[{players:[{x:8,y:-5},{x:45,y:25}],ball:{x:26.65,y:0}}];
+ for(const factory of [all22Camera,broadcastCamera])for(const [width,height] of [[390,700],[1280,720]])for(const zoom of [1,2,3]){
+  const base=factory(frames,width,height,{zoom,pan:{x:8,y:10}});
+  for(const ball of [{x:26.65,y:-8,z:0},{x:4,y:35,z:12},{x:51,y:90,z:0},{x:20,y:-20,z:2}]){
+   const camera=ballFollowCamera(base,ball,width,height),screen=camera.point(ball.x,ball.y);
+   assert.ok(Math.abs(screen.x-width/2)<1e-8);
+   assert.ok(Math.abs(screen.y-ball.z*camera.scale*.65-height/2)<1e-8);
+   assert.equal(camera.scale,base.scale);
+   const point=camera.point(12,34),world=camera.world(point.x,point.y);
+   assert.ok(Math.abs(world.x-12)<1e-8&&Math.abs(world.y-34)<1e-8);
+  }
+  assert.equal(ballFollowCamera(base,null,width,height),base);
+ }
+});

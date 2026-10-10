@@ -1,0 +1,48 @@
+{
+  "name": "playcall-football",
+  "account_id": "4bd95483494c717c48aadd6c68e4a120",
+  "compatibility_date": "2026-10-03",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "playcallfootball.com/*",
+      "zone_name": "playcallfootball.com"
+    },
+    {
+      "pattern": "www.playcallfootball.com/*",
+      "zone_name": "playcallfootball.com"
+    }
+  ],
+  "main": "server/worker.js",
+  "d1_databases": [
+    {
+      "binding": "MP_DB",
+      "database_name": "playcall-multiplayer",
+      "database_id": "820ea30f-8307-4a32-8212-a7e59cf3d2cb"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MP_ROOMS",
+        "class_name": "MultiplayerRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "mp-v1",
+      "new_sqlite_classes": [
+        "MultiplayerRoom"
+      ]
+    }
+  ]
+}

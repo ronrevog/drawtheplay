@@ -27,8 +27,9 @@ export function recordSnap(previous,{before,after,simulation,play,kind,yards=0})
  const runner=person(find('Handoff')?.to||find('Keeper')?.to||'QB');inc(runner,side,'rushAttempts');inc(runner,side,'rushingYards',yards);const r=row(runner,side);if(r)r.stats.longestRush=Math.max(r.stats.longestRush||0,yards);add(own.team,'rushAttempts');add(own.team,'rushingYards',yards);if(td){inc(runner,side,'rushingTDs');add(own.team,'rushingTDs')}
  }
  if(kind==='sack'){add(own.team,'sacksAllowed');add(own.team,'sackYards',-yards);add(other.team,'sacks');const d=person(find('Sack')?.by,'defense');inc(d,opponent,'sacks');inc(d,opponent,'tackles')}
- else {const tackle=find('Tackle')||[...events].reverse().find(e=>e.type==='Contact');if(tackle?.by)inc(person(tackle.by,'defense'),opponent,'tackles')}
- if(kind==='fumble'){const f=person(find('Fumble')?.by);inc(f,side,'fumblesLost');add(own.team,'fumblesLost')}
+ else {const tackle=find('Tackle')||[...events].reverse().find(e=>e.type==='Contact');if(tackle?.by){const team=tackle.side==='offense'?side:opponent;inc(person(tackle.by,tackle.side||'defense'),team,'tackles')}}
+ if(['interception','fumble'].includes(kind)&&sim.recoverySide==='defense'){const r=sim.people.find(p=>p.id===sim.playerId);inc(r,opponent,'returns');inc(r,opponent,'returnYards',Math.round(sim.returnYards||0));add(other.team,'returns');add(other.team,'returnYards',Math.round(sim.returnYards||0));if(after.score[opponent]-before.score[opponent]===6){inc(r,opponent,'returnTDs');add(other.team,'returnTDs');add(other.team,'touchdowns')}}
+ if(kind==='fumble'&&simulation?.recoverySide!=='offense'){const f=person(find('Fumble')?.by);inc(f,side,'fumblesLost');add(own.team,'fumblesLost')}
  const converted=!['fumble','interception'].includes(kind)&&(td||(after.possession===side&&after.down===1&&yards>=before.distance));
  if(before.down===3||before.down===4){const prefix=before.down===3?'third':'fourth';add(own.team,`${prefix}Attempts`);if(converted)add(own.team,`${prefix}Conversions`)}
  if(converted){add(own.team,'firstDowns');if(td)add(own.team,'touchdowns')}
