@@ -1,8 +1,13 @@
-import React,{useEffect,useState} from 'react';
-import {Users} from 'lucide-react';
+import React,{useEffect,useRef,useState} from 'react';
+import {Bell,X} from 'lucide-react';
 import {multiplayerApi} from './multiplayerApi';
-export function FriendInboxButton({onClick}){
- const [count,setCount]=useState(0);
- useEffect(()=>{let alive=true;async function check(){if(document.hidden)return;try{const matches=await multiplayerApi('matches');if(alive)setCount(matches.filter(m=>(m.status==='invited'&&m.side!=='home')||(m.status==='active'&&!m.submitted)).length)}catch{/* Opening the inbox shows a retryable error. */}}check();const timer=setInterval(check,30000);return()=>{alive=false;clearInterval(timer)}},[]);
- return <button className="friend-inbox-button" onClick={onClick} aria-label={`Friends${count?` · ${count} invitations or turns waiting`:''}`}><Users size={19}/><span>Friends</span>{count>0&&<b>{count}</b>}</button>;
+import './notifications.css';
+export function FriendInboxButton({onClick,apiClient=multiplayerApi}){
+ const [items,setItems]=useState([]),[open,setOpen]=useState(false),[error,setError]=useState('');const root=useRef(null);
+ async function refresh(){try{setItems(await apiClient('notifications'));setError('')}catch{setError('Notifications could not load. Try again.')}}
+ useEffect(()=>{let alive=true;async function poll(){if(document.hidden)return;try{const rows=await apiClient('notifications');if(alive){setItems(rows);setError('')}}catch{if(alive)setError('Notifications could not load. Try again.')}}poll();const timer=setInterval(poll,30000);return()=>{alive=false;clearInterval(timer)}},[]);
+ useEffect(()=>{if(!open)return;const outside=e=>{if(!root.current?.contains(e.target))setOpen(false)};const escape=e=>{if(e.key==='Escape')setOpen(false)};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)}},[open]);
+ async function read(ids){try{await apiClient('notifications',{read:ids});setItems(rows=>rows.map(n=>ids.includes(n.id)?{...n,read:true}:n));setError('')}catch{setError('Could not mark as read. Please retry.')}}
+ const unread=items.filter(n=>!n.read);
+ return <div className="notification-root" ref={root}><button type="button" className="friend-inbox-button" aria-label={`Notifications${unread.length?` · ${unread.length} unread`:''}`} aria-expanded={open} onClick={()=>{setOpen(v=>!v);refresh()}}><Bell size={19}/><span>Notifications</span>{unread.length>0&&<b>{unread.length}</b>}</button>{open&&<section className="notification-dropdown" aria-label="Notifications"><header><strong>Notifications</strong><button aria-label="Close notifications" onClick={()=>setOpen(false)}><X size={18}/></button></header>{error&&<p role="alert">{error}<button onClick={refresh}>Retry</button></p>}{unread.length>0&&<button className="notice-read-all" onClick={()=>read(unread.map(n=>n.id))}>Mark all as read</button>}{!items.length&&!error&&<p>No notifications yet.</p>}<div className="notification-list">{items.map(n=><article key={n.id} className={n.read?'read':'unread'}><button onClick={()=>{read([n.id]);setOpen(false);onClick(n.matchId)}}><strong>{n.title}</strong><span>{n.body}</span><small>{n.updated?new Date(n.updated).toLocaleString():''}{n.read?' · Read':''}</small></button>{!n.read&&<button className="notice-mark-read" onClick={()=>read([n.id])}>Mark read</button>}</article>)}</div><button className="notification-footer" onClick={()=>{setOpen(false);onClick()}}>All games & invitations</button></section>}</div>;
 }

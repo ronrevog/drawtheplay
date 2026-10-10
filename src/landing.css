@@ -13,3 +13,5 @@
 .pc-landing button>svg,.pc-explore>svg{flex-shrink:0;vertical-align:middle}.pc-explore>svg{margin-left:16px}
 
 .pc-session-loading{min-height:100dvh;display:grid;place-items:center;background:#080c12;color:#b4c0d1;font-size:14px;letter-spacing:.03em;padding:24px;text-align:center}
+
+.pc-session-loading>div{max-width:420px;text-align:center;padding:24px}.pc-session-loading p{margin:20px 0;line-height:1.6}.pc-session-loading button{min-height:44px;padding:12px;margin:6px;border:1px solid #4b6487;border-radius:6px}

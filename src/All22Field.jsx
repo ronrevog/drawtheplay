@@ -3,8 +3,8 @@ import {playerFootAnchor,spriteFootPoint} from './playerFootAnchor.js';
 import {playerSkinTone,materialColor} from './playerAppearance.js';
 import {spriteFrame} from './tacklePlayback.js';
 import {getPlayerSprites,loadPlayerSprites} from './playerSprites.js';
-import React,{useEffect,useMemo,useRef,useState} from 'react';
-import {ballFollowCamera,all22Camera,broadcastCamera,broadcastPlayer,playerAnimation,spriteDirection} from './all22';
+import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {snapFollowCamera,all22Camera,broadcastCamera,broadcastPlayer,playerAnimation,spriteDirection} from './all22';
 import {FieldAssignments} from './FieldAssignments.jsx';
 
 // This optional local reference pack is deliberately excluded from Git/builds.
@@ -43,9 +43,14 @@ function pixelPlayer(c,p,palette,t,scale,skin){
 export function All22Field({simulation,frame,people,elapsed,colors,spot,distance,play,coach,inspected,active,home,offenseMode,defenseMode,defensePlan={},stroke,zoom=1,pan={x:0,y:0},onFieldDown,onFieldMove,onFieldUp,onFieldCancel,onReady,broadcast=false,hintText}){
  const terrain=useRef(null),canvas=useRef(null),hits=useRef([]),gesture=useRef(null),[size,setSize]=useState({width:640,height:700});const pack=useReferenceSprites();
  useEffect(()=>{const element=canvas.current;const observer=new ResizeObserver(([entry])=>{const {width,height}=entry.contentRect;if(width&&height)setSize({width:Math.max(1,Math.round(width)),height:Math.max(1,Math.round(height))})});observer.observe(element);return()=>observer.disconnect()},[]);
- const fittedCamera=useMemo(()=>(broadcast?broadcastCamera:all22Camera)(simulation.frames,size.width,size.height,{zoom,pan,spot}),[simulation,size.width,size.height,zoom,pan.x,pan.y,spot,broadcast]);
- const camera=active&&zoom>0?ballFollowCamera(fittedCamera,frame?.ball,size.width,size.height):(gesture.current?.camera||fittedCamera);
- useEffect(()=>{
+ const fittedCamera=useMemo(()=>(broadcast?broadcastCamera:all22Camera)(simulation.frames.slice(0,1),size.width,size.height,{zoom,pan,spot}),[simulation,size.width,size.height,zoom,pan.x,pan.y,spot,broadcast]);
+ const preSnapCamera=useRef(null);
+ // Preserve the camera the user was looking through when Snap was pressed.
+ const viewKey=`${size.width}/${size.height}/${zoom}/${pan.x}/${pan.y}/${broadcast}`;
+ const base=active&&preSnapCamera.current?.key===viewKey?preSnapCamera.current.camera:fittedCamera;
+ const camera=active&&zoom>0?snapFollowCamera(base,frame?.ball,size.width,size.height,elapsed,['fg','pat'].includes(simulation.special)?1:.65):(gesture.current?.camera||base);
+ useLayoutEffect(()=>{if(!active)preSnapCamera.current={key:viewKey,camera:fittedCamera}},[active,viewKey,fittedCamera]);
+ useLayoutEffect(()=>{
   if(!frame||pack===undefined)return;const {width,height}=size;let c=terrain.current.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,width,height);c.fillStyle='#10281f';c.fillRect(0,0,width,height);
   const point=camera.point;
   function polygon(points,fill){c.beginPath();points.forEach(([x,y],i)=>{const p=point(x,y);i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y)});c.closePath();c.fillStyle=fill;c.fill()}
@@ -95,7 +100,7 @@ export function All22Field({simulation,frame,people,elapsed,colors,spot,distance
   const carrier=frame.players.find(p=>p.slot===frame.carrier);
   const pose=footballPose(frame,simulation.frames,elapsed,!!(carrier&&pack?.byName[playerAnimation(carrier,frame.carrier)]));
   if(pose){
-   const b=point(frame.ball.x,frame.ball.y),z=pose.height*camera.scale*.65,w=Math.max(3,camera.scale*.65),s=pack?.football;
+   const b=point(frame.ball.x,frame.ball.y),z=pose.height*camera.scale*(simulation.special==='fg'||simulation.special==='pat'?1:.65),w=Math.max(3,camera.scale*.65),s=pack?.football;
    c.fillStyle='#0b1d1666';c.beginPath();c.ellipse(b.x,b.y,w*.4,w*.14,0,0,Math.PI*2);c.fill();
    c.save();c.translate(b.x,b.y-z);c.rotate(broadcast?Math.atan2(.62*Math.cos(pose.angle),Math.sin(pose.angle)+.13*Math.cos(pose.angle)):pose.angle);
    if(s){const h=w*s.height/s.width;c.drawImage(pack.image,(s.image%pack.columns)*pack.cell,Math.floor(s.image/pack.columns)*pack.cell,s.width,s.height,-w/2,-h/2,w,h)}

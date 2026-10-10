@@ -181,7 +181,8 @@ export const NFL_COLORS={
     "secondary": "#FFB612"
   }
 };
-export function inkFor(hex){const rgb=hex.replace('#','').match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722>.179?'#101820':'#ffffff'}
-export function teamPalette(team,color='#c8f36c'){const key=String(team||'').toUpperCase();const known=NFL_COLORS[key]||Object.values(NFL_COLORS).find(t=>t.name.toUpperCase()===key);const p=known||{primary:color,secondary:inkFor(color)};return {...p,ink:inkFor(p.primary)}}
-export function fieldPalettes(name,opponent,color,possession,secondary,tertiary){const home=secondary?{primary:color,secondary,tertiary,ink:inkFor(color)}:teamPalette(name,color),away=teamPalette(opponent,'#64748b');return {home,away,offense:possession==='home'?home:away,defense:possession==='home'?away:home}}
+export function safeTeamColor(value,fallback='#c8f36c'){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value:fallback}
+export function inkFor(hex){const rgb=safeTeamColor(hex).replace('#','').match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722>.179?'#101820':'#ffffff'}
+export function teamPalette(team,color='#c8f36c'){const key=String(team||'').toUpperCase();const known=NFL_COLORS[key]||Object.values(NFL_COLORS).find(t=>t.name.toUpperCase()===key);const p=known||{primary:safeTeamColor(color),secondary:inkFor(color)};return {...p,ink:inkFor(p.primary)}}
+export function fieldPalettes(name,opponent,color,possession,secondary,tertiary){const home=secondary?{primary:safeTeamColor(color),secondary:safeTeamColor(secondary,'#ffffff'),tertiary:safeTeamColor(tertiary,'#ff653d'),ink:inkFor(color)}:teamPalette(name,color),away=teamPalette(opponent,'#64748b');return {home,away,offense:possession==='home'?home:away,defense:possession==='home'?away:home}}
 export const PLAYER_RADIUS=.74;

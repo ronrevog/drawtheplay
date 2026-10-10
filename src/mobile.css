@@ -140,3 +140,7 @@ body.playing-fullscreen .app-header,body.playing-fullscreen .sidebar,body.playin
 @media(max-width:600px){.live-game .live-score{grid-template-columns:32px minmax(0,1fr) 76px minmax(0,1fr) 48px 32px;gap:2px}.live-game .live-score .quit-game{padding:8px 6px;font-size:12px}}
 
 .defensive-filters{display:flex;gap:8px;flex-wrap:wrap}.defensive-filters label{flex:1;min-width:100px;font-size:12px}.defensive-filters select{display:block;width:100%;min-height:44px;margin-top:5px}.defensive-book>p{font-size:12px;color:#aabbd0}.defensive-call-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.defensive-call{display:flex;flex-direction:column;align-items:stretch;text-align:left;padding:12px;background:#182b3c;border:1px solid #425870;border-radius:8px;color:white;gap:5px;min-width:0}.defensive-call svg{width:100%;max-height:110px;background:#123323;border-radius:4px}.defensive-call strong{font-size:16px}.defensive-call span,.defensive-call small{font-size:11px;line-height:1.4;color:#c3d2e1}.defensive-call[aria-pressed=true]{border-color:#96caff;background:#234c77;box-shadow:inset 0 0 0 1px #96caff}.mp-call-menu .defensive-book{width:100%}
+
+.account-sync-status{font-size:11px;color:#a8bfd8;margin:0 0 12px}
+
+.remote-game-status{position:absolute;top:4px;left:50%;transform:translateX(-50%);z-index:25;max-width:90%;padding:8px 14px;background:#132239ed;border:1px solid #456791;border-radius:6px;color:#edf4ff;font-size:12px;text-align:center;pointer-events:none}

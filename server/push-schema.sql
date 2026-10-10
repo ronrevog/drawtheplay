@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS pc_push (id TEXT PRIMARY KEY,uid TEXT NOT NULL,subscription TEXT NOT NULL,preferences TEXT NOT NULL,updated INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pc_push_uid ON pc_push(uid);
+CREATE TABLE IF NOT EXISTS pc_push_outbox (id TEXT PRIMARY KEY,uid TEXT NOT NULL,type TEXT NOT NULL,payload TEXT NOT NULL,created INTEGER NOT NULL,next_try INTEGER NOT NULL,attempts INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pc_push_due ON pc_push_outbox(next_try);

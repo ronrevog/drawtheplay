@@ -161,9 +161,9 @@ holds the phone number; private `playcallProfiles/{uid}` documents contain only 
 display name and server update timestamp. Existing `/users` rules belong to the
 native app and were preserved. Do not put private profile data in that collection.
 
-Accounts are optional for local play. Signing in does not upload, replace, or
-synchronize the browser-local franchise. Friend matches are saved separately on the server; the local franchise remains
-on this browser. See docs/multiplayer.md for multiplayer setup and limits. Game notification consent is separate and is not requested here.
+Accounts are optional for local play. Signed-in franchises now synchronize through the private D1 franchise endpoint.
+See docs/franchise-sync.md for migration, conflict handling and limits. Friend
+matches also follow the account; see docs/multiplayer.md. Game notification consent is separate and is not requested here.
 
 Phone provider enabled; SMS region allowlist: US. Authorized game domains:
 playcallfootball.com, www.playcallfootball.com, playcall-football.sloptvedits.workers.dev.

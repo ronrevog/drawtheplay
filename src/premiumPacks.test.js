@@ -31,7 +31,7 @@ test('overlapping unlocks, signed players and starters reduce the price without 
  const overlap=openPremiumPack(funded(),'mvp-royalty',players,'00-0026498').state;assert(premiumOffer(overlap,'triple-crown',players).cost<28);
 });
 test('missing data, insufficient tokens and unknown packs fail without mutation',()=>{
- const s=initialState(),snapshot=structuredClone(s);
+ const s={...initialState(),tokens:0},snapshot=structuredClone(s);
  assert.throws(()=>openPremiumPack(s,'mvp-royalty',players,'00-0026498'),/Not enough/);assert.deepEqual(s,snapshot);
  assert.throws(()=>openPremiumPack(funded(),'mvp-royalty',players.filter(p=>p.id!=='00-0026498')),/all three/);
  assert.throws(()=>openPremiumPack(funded(),'unknown',players),/Unknown/);
@@ -48,7 +48,7 @@ test('selection is required and must belong to the available lineup',()=>{
  assert.deepEqual(s.unlocked,[]);assert.equal(s.tokens,200);
 });
 test('premium gallery renders eight covers, lineups and disabled affordable-state buttons',()=>{
- const html=renderToStaticMarkup(React.createElement(PremiumPacks,{state:initialState(),players,onBuy:()=>{},onInspect:()=>{}}));
+ const html=renderToStaticMarkup(React.createElement(PremiumPacks,{state:{...initialState(),tokens:5},players,onBuy:()=>{},onInspect:()=>{}}));
  for(const p of PREMIUM_PACKS){assert(html.includes(`/packs/${p.id}.png`));assert(html.includes(p.name))}
  assert(html.includes('Need 25 more tokens'));assert(html.includes('Myles Garrett'));assert(html.includes('disabled'));
  assert.equal((html.match(/type="radio"/g)||[]).length,24);assert(html.includes('CHOOSE 1 OF 3'));assert(html.includes('1 player unlock'));

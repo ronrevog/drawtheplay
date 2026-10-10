@@ -1,10 +1,11 @@
+import {createKickFlight,kickPosition} from './kickFlight.js';
 import {depthStarters} from './depthChart.js';
 import {createRng} from './engine/rng.ts';
 import {footballTraits,steer,distance,DT,clamp,separateBodies} from './footballPhysics.js';
 import {orderedRoster} from './playbook.js';
 import {toOffenseYards,fromOffenseYards,otherSide} from './engine/field.ts';
 import {newSeries} from './engine/rules/downs.ts';
-import {addPoints,toKickoff,scoreTouchdown,fieldGoalProbability} from './engine/rules/scoring.ts';
+import {addPoints,toKickoff,scoreTouchdown} from './engine/rules/scoring.ts';
 export const SPECIAL_PLAYS=[{id:'kickoff',name:'Dynamic kickoff',description:'Landing-zone kick · coverage and return'},{id:'punt',name:'Punt',description:'Long snap · protection · gunners and return'},{id:'fg',name:'Field goal',description:'Snap · hold · placekick'},{id:'pat',name:'Extra point',description:'15-yard snap · 33-yard attempt'}];
 export function specialLineup(type,offense,defense,spot,depth={},defDepth={}){
  const specialists={offense:depthStarters(offense,depth,'Special teams'),defense:depthStarters(defense,defDepth,'Special teams')};const reserved=new Set(Object.entries(specialists).flatMap(([side,unit])=>Object.entries(unit).filter(([slot])=>side==='defense'?slot===(type==='punt'?'PR':'KR'):['K','P','LS','H'].includes(slot)).map(([,p])=>`${side}/${p.id}`)));
@@ -37,11 +38,10 @@ export function resolveSpecialTeams({state,type,offense,defense,seed,depth={},de
  const spot=type==='pat'?85:toOffenseYards(state.yardLine,state.possession),people=specialLineup(type,offense,defense,spot,depth,defDepth),off=people.filter(p=>p.side==='offense'),def=people.filter(p=>p.side==='defense');
  const by=Object.fromEntries(people.map(p=>[p.slot,p])),kicker=by[punt?'P':'K'],returner=by.KR,origin=Object.fromEntries(people.map(p=>[p.slot,{x:p.x,y:p.y}]));
  const kickAt=kickoff?1.05:punt?2.05:1.25,launchY=kickoff?0:punt?origin.P.y:-8;
- const kickDistance=110-spot-launchY,ratings={kickPower:kicker.rating,kickAccuracy:kicker.rating};
- const make=place&&rng.chance(fieldGoalProbability(kickDistance,ratings));const maxDistance=clamp(62+(kicker.rating-75)*.3+rng.range(-3,3),48,74);const short=place&&!make&&kickDistance>maxDistance;
- const landing=place?{x:26.65+(make?rng.range(-2.6,2.6):rng.range(3.6,8)*(rng.chance(.5)?1:-1)),y:110-spot}:kickoff?{x:rng.range(12,41),y:clamp(rng.normal(94+(kicker.rating-75)*.14,5),80,109)-spot}:{x:rng.range(8,45),y:clamp(rng.normal(45+(kicker.rating-75)*.2,6),25,66)};
- if(short){landing.x=26.65+rng.range(-2,2);landing.y=launchY+maxDistance;}
- const hang=place?clamp(kickDistance/25,1.3,3.8):punt?clamp(4.4+(kicker.rating-75)*.012,3.8,5.2):3.6;
+ const kickDistance=110-spot-launchY;
+ const flight=place?createKickFlight({launchY,goalY:110-spot,rating:kicker.rating,rng}):null;
+ const landing=place?kickPosition(flight,flight.groundTime):kickoff?{x:rng.range(12,41),y:clamp(rng.normal(94+(kicker.rating-75)*.14,5),80,109)-spot}:{x:rng.range(8,45),y:clamp(rng.normal(45+(kicker.rating-75)*.2,6),25,66)};
+ const hang=place?flight.endTime:punt?clamp(4.4+(kicker.rating-75)*.012,3.8,5.2):3.6;
  const landAt=kickAt+hang,frames=[],events=[],blocks=new Map(),blockCooldown=new Map(),tackles=new Map();let kickLogged=false;let ball={x:26.65,y:kickoff?0:-.75,z:.25},t=0,phase=kickoff?'Kickoff setup':'Long snap',carrier=null,done=false,outcome='',caughtAt=null,good=false,blocked=false;
  const event=(type,details={})=>events.push({t:+t.toFixed(2),type,...details});
  function record(){frames.push({t:+t.toFixed(2),phase,players:people.map(p=>({slot:p.slot,side:p.side,x:+p.x.toFixed(3),y:+p.y.toFixed(3),vx:p.vx,vy:p.vy,status:p.status})),ball:{...ball},read:-1,carrier:carrier?.slot||null,blocks:[...blocks.values()].map(e=>({blocker:e.b.slot,defender:e.d.slot,mode:'Run block'}))})}
@@ -57,7 +57,7 @@ export function resolveSpecialTeams({state,type,offense,defense,seed,depth={},de
  if(!kicked){phase=kickoff?'Approach':t<.5?'Long snap':'Set and kick';if(kickoff){steer(kicker,{x:26.65,y:0},4);kicker.status='Approach'}else{const receiver=by[punt?'P':'H'];const fraction=clamp(t/.5,0,1);ball={x:26.65,y:-.75+(receiver.y+.75)*fraction,z:.5};receiver.status=punt?'Receive snap':'Hold';if(!punt)steer(kicker,{x:26.65,y:-8},4)}
  }
  if(t>=kickAt&&!kickLogged){kickLogged=true;event(punt?'Punt':place?'Placekick':'Kickoff',{by:kicker.slot});kicker.status='Kick';if(!kickoff){const rusher=def.find(d=>distance(d,{x:26.65,y:launchY})<1.6);if(rusher){blocked=true;event('Kick blocked',{by:rusher.slot});landing.x=rusher.x;landing.y=rusher.y+2}}}
- if(kicked&&!carrier){const f=clamp((t-kickAt)/(blocked?.8:hang),0,1);phase='Kick in flight';ball={x:26.65+(landing.x-26.65)*f,y:launchY+(landing.y-launchY)*f,z:.4+Math.sin(Math.PI*f)*(place?Math.min(12,kickDistance*.23):punt?14:10)};if(place&&f>=1)ball.z=blocked||short?0:make?4.5:4;}
+ if(kicked&&!carrier){const f=clamp((t-kickAt)/(blocked?.8:hang),0,1);phase='Kick in flight';ball=place&&!blocked?kickPosition(flight,t-kickAt):{x:26.65+(landing.x-26.65)*f,y:launchY+(landing.y-launchY)*f,z:Math.sin(Math.PI*f)*(blocked?1.5:punt?14:10)};}
  if(!kickoff&&!landed){
  for(const d of def){if(held.has(d.slot)||d.slot==='KR')continue;if(place&&d.slot==='D11'){d.status=kicked?'Watch kick':'Guard fake';steer(d,origin[d.slot],0)}else if(place){const edge=['D1','D10'].includes(d.slot),outside=Math.sign(origin[d.slot].x-26.65);d.status=edge?'Edge rush':'Interior rush';const turn=edge&&d.y>-3;steer(d,turn?{x:26.65+outside*9,y:-4}:!edge&&d.y>-.5?{x:origin[d.slot].x,y:-2}:{x:26.65,y:launchY},d.traits.topSpeed)}else if(punt&&['JL','JR'].includes(d.slot)){d.status='Jam gunner';steer(d,by[d.slot==='JL'?'GL':'GR'],d.traits.topSpeed)}else if(punt&&['D7','D8'].includes(d.slot)){d.status='Return setup';steer(d,{x:landing.x+(d.slot==='D7'?-4:4),y:landing.y-6},d.traits.topSpeed)}else{d.status='Rush';steer(d,{x:26.65,y:launchY},d.traits.topSpeed)}}
  if(punt){for(const g of [by.GL,by.GR]){if(held.has(g.slot))continue;g.status='Gunner';steer(g,{x:g.slot==='GL'?landing.x-2:landing.x+2,y:landing.y},g.traits.topSpeed,DT,false)}}
@@ -66,7 +66,7 @@ export function resolveSpecialTeams({state,type,offense,defense,seed,depth={},de
  if(returner&&!carrier){returner.status='Track kick';steer(returner,landing,returner.traits.topSpeed);if(by.KR2)steer(by.KR2,{x:landing.x+5,y:landing.y-2},by.KR2.traits.topSpeed*.8)}
  if(kickoff&&kicked&&!landed)steer(kicker,{x:26.65,y:Math.min(50-spot,15)},4);
  if(kicked&&landed&&!caughtAt&&!done){
- if(place){good=!blocked&&spot+ball.y>=110-.01&&Math.abs(ball.x-26.65)<18.5/6&&ball.z>10/3;finish(blocked?'Blocked kick':good?'GOOD':short?'Short':ball.x<26.65?'Wide left':'Wide right')}
+ if(place){good=!blocked&&flight.good;finish(blocked?'Blocked kick':flight.outcome,{crossing:blocked?null:flight.crossing})}
  else if(blocked){finish('Blocked punt')}
  else if(spot+landing.y>=100){finish('Touchback')}
  else if(distance(returner,landing)>2){finish('Downed')}
@@ -90,6 +90,6 @@ export function resolveSpecialTeams({state,type,offense,defense,seed,depth={},de
  const takeover=(side,own)=>({...state,...newSeries(side,fromOffenseYards(own,side)),phase:'Scrimmage',drive:state.drive+1,clockRunning:false});
  if(place){if(type==='pat')next=toKickoff(good?addPoints(state,state.possession,1):state,state.possession);else if(good)next=toKickoff(addPoints(state,state.possession,3),state.possession);else next=takeover(receiving,Math.max(20,100-spot-launchY));}
  else if(outcome==='Return touchdown')next={...scoreTouchdown(state,receiving,t,returner.id).state,drive:state.drive+1};else next=takeover(receiving,receivingSpot);
- const simulation={special:type,kind:'kick',spot,people:people.map(({slot,side,id,name,number,traits})=>({slot,side,id,name,number,traits})),frames,events,duration:t,coverage:'Special teams',outcome,kickDistance:place?kickDistance:landing.y-launchY,returnYards:carrier?Math.max(0,Math.round(landing.y-carrier.y)):0,good};
+ const simulation={special:type,kind:'kick',spot,people:people.map(({slot,side,id,name,number,traits})=>({slot,side,id,name,number,traits})),frames,events,duration:t,coverage:'Special teams',outcome,kickFlight:place&&!blocked?flight:null,kickDistance:place?kickDistance:landing.y-launchY,returnYards:carrier?Math.max(0,Math.round(landing.y-carrier.y)):0,good};
  return {state:next,simulation,seconds:type==='pat'?0:kickoff?(caughtAt?Math.ceil(t-caughtAt):0):Math.ceil(t),text:place?`${type==='pat'?'Extra point':`${kickDistance}-yard field goal`} · ${outcome}`:`${kickoff?'Kickoff':'Punt'} · ${outcome}${carrier?` · ${simulation.returnYards}-yard return`:''}${next.phase==='Scrimmage'?` · ball at own ${receivingSpot}`:''}`};
 }

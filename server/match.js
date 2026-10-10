@@ -1,3 +1,6 @@
+import {normalizeDefense} from '../src/defensivePlan.js';
+import {toOffenseYards} from '../src/engine/field.ts';
+import {toKickoff} from '../src/engine/rules/scoring.ts';
 import {withLegendPlayers} from '../src/legendPlayers.js';
 import {findIdentity} from '../src/teamIdentities.js';
 import {startPractice,simulateSnap} from '../src/practice.js';
@@ -32,7 +35,7 @@ export function newGame(catalog,host,guest,seed){
 }
 export function sanitizeCall(body,game,side){
  if(game.completed)fail('This game is over.',409);
- if(side!==game.state.possession){if(!DEFENSES.includes(body.coverage))fail('Choose a defensive coverage.');return {coverage:body.coverage}}
+ if(side!==game.state.possession){if(!DEFENSES.includes(body.coverage))fail('Choose a defensive coverage.');return {coverage:body.coverage,defensePlan:normalizeDefense(body.defensePlan,toOffenseYards(game.state.yardLine,game.state.possession))}}
  const action=body.action||'snap';if(!['snap','punt','fg','two'].includes(action))fail('Invalid call.');
  if((['punt','fg'].includes(action)&&game.state.phase!=='Scrimmage')||(action==='two'&&game.state.phase!=='PAT'))fail('That call is not available now.');
  const raw=body.play||DEFAULT_PLAYS[0];
@@ -42,18 +45,19 @@ export function sanitizeCall(body,game,side){
  if(game.state.phase==='Scrimmage'&&action==='snap'){
   const formation=formationRules(play,game[side],{});if(!formation.legal)fail(formation.errors.join(' '));
   if(play.type==='pass'&&!formation.eligible.some(slot=>play.routes[slot]?.length>1))fail('Draw a receiver route.');
-  if(play.type==='run'&&!play.routes[play.runner]?.length)fail('Draw the runner’s route.');
+  if(play.type==='run'&&!play.routes[play.runner]?.length)fail('Draw the runnerÃ¢â‚¬â„¢s route.');
  }
  return {play,action};
 }
 export function resolveCalls(doc){
  const off=doc.game.state.possession,def=off==='home'?'away':'home';
- const call={...doc.calls[off],coverage:doc.calls[def].coverage,multiplayer:true};
+ const call={...doc.calls[off],coverage:doc.calls[def].coverage,defensePlan:doc.calls[def].defensePlan,multiplayer:true};
  const before={...doc.game,last:null};
  const next=simulateSnap(before,call);
  const simulation=next.last?.simulation;
  doc.replay={before,call};doc.game={...next,last:next.last?{...next.last,simulation:undefined}:null,log:next.log.slice(0,80)};
- doc.calls={};if(next.completed)doc.status='complete';
+ if(doc.playoff&&doc.game.completed&&doc.game.state.score.home===doc.game.state.score.away){doc.game.completed=false;doc.game.state={...toKickoff(doc.game.state,doc.game.state.quarter%2?'away':'home'),quarter:doc.game.state.quarter+1,clock:120};}
+ doc.calls={};if(doc.game.completed)doc.status='complete';
  return simulation;
 }
 export function visibleMatch(row,uid){
@@ -62,7 +66,7 @@ export function visibleMatch(row,uid){
  return {id:row.id,revision:row.revision,status:row.status,host:row.host,guest:row.guest,
   hostName:doc.hostName,guestName:doc.guestName,hostTeam:doc.hostTeam,guestTeam:doc.guestTeam,
   hostFranchise:doc.hostFranchise?{...doc.hostFranchise,ids:undefined,depth:undefined}:null,guestFranchise:doc.guestFranchise?{...doc.guestFranchise,ids:undefined,depth:undefined}:null,
-  side,game:side?game:null,submitted:side?!!doc.calls?.[side]:false,
+  cpu:doc.cpu||null,side,game:side?game:null,submitted:side?!!doc.calls?.[side]:false,
   opponentSubmitted:side?!!doc.calls?.[side==='home'?'away':'home']:false,
   expires:row.expires,updated:row.updated,winner:doc.winner||null};
 }

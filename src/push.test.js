@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {validSubscription} from '../server/push.js';
+const sub={endpoint:'https://fcm.googleapis.com/fcm/send/test',keys:{p256dh:'a'.repeat(87),auth:'a'.repeat(22)}};
+test('push endpoint validation rejects SSRF and malformed keys',()=>{assert.equal(validSubscription(sub),true);for(const endpoint of ['http://fcm.googleapis.com/test','https://localhost/x','https://fcm.googleapis.com.evil.test/x','https://user@fcm.googleapis.com/x','https://fcm.googleapis.com:444/x'])assert.equal(validSubscription({...sub,endpoint}),false);assert.equal(validSubscription({...sub,keys:{}}),false)});

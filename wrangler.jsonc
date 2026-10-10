@@ -1,6 +1,8 @@
 {
   "name": "playcall-football",
   "account_id": "4bd95483494c717c48aadd6c68e4a120",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {"crons": ["* * * * *"]},
   "compatibility_date": "2026-10-03",
   "assets": {
     "directory": "./dist",

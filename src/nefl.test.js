@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {schedule,NEFL_TEAMS,standings,playoffGames} from './nefl.js';
+test('10-game season has unique opponents, five home and five away per team',()=>{const games=schedule();assert.equal(games.length,100);for(const t of NEFL_TEAMS){const own=games.filter(g=>[g.home,g.away].includes(t.id));assert.equal(own.length,10);assert.equal(own.filter(g=>g.home===t.id).length,5);assert.equal(new Set(own.map(g=>g.home===t.id?g.away:g.home)).size,10);assert.equal(new Set(own.map(g=>g.week)).size,10)}});
+test('standings and eight-team playoffs advance to one championship',()=>{const games=schedule().map(g=>({...g,score:{home:21,away:7}}));assert.ok(standings(games).every(t=>t.w===5&&t.l===5));for(let w=11;w<=13;w++){const round=playoffGames(games,w);assert.equal(round.length,2**(13-w));games.push(...round.map(g=>({...g,score:{home:14,away:7}})))}assert.equal(games.length,107)});
+import {readFileSync} from 'node:fs';
+import {newGame,resolveCalls} from '../server/match.js';
+import {DEFAULT_PLAYS} from './playbook.js';
+test('tied playoff game continues into overtime with a valid kickoff',()=>{const catalog=JSON.parse(readFileSync(new URL('../public/data/catalog.json',import.meta.url),'utf8')).players;const game=newGame(catalog,'KC','BUF','overtime-check');game.state={...game.state,quarter:4,clock:1,phase:'Kickoff',score:{home:0,away:0}};const d={game,playoff:true,calls:{home:{play:DEFAULT_PLAYS[0]},away:{coverage:'Man'}}};resolveCalls(d);assert.equal(d.game.completed,false);assert.equal(d.game.state.quarter,5);assert.equal(d.game.state.phase,'Kickoff');assert.equal(d.game.state.clock,120)});

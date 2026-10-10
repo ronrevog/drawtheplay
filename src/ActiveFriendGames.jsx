@@ -2,7 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {TeamHelmet} from './TeamIdentity.jsx';
 import {multiplayerApi} from './multiplayerApi';
 
-function MatchHelmet({franchise,team}){
+export function MatchHelmet({franchise,team}){
  if(franchise?.identity||!franchise?.primary)return <TeamHelmet identity={franchise?.identity} code={team} size={80}/>;
  return <svg width="80" height="80" viewBox="0 0 100 100" role="img" aria-label={`${team} helmet`}><path d="M14 59V44a34 34 0 0 1 68 0v18H49L36 76H17Z" fill={franchise.primary} stroke={franchise.secondary} strokeWidth="4"/><path d="M53 51h33v29H59L49 64M65 54v24M84 65H54" fill="none" stroke={franchise.secondary} strokeWidth="5" strokeLinejoin="round"/></svg>;
 }

@@ -1,0 +1,2 @@
+self.addEventListener('push',event=>{let data;try{data=event.data.json()}catch{return}event.waitUntil(self.registration.showNotification(data.title||'Playcall Football',{body:data.body||'Open your game.',icon:'/apple-touch-icon.png',badge:'/favicon-32.png',tag:data.tag,data:{url:data.url||'/'}}))});
+self.addEventListener('notificationclick',event=>{event.notification.close();const url=new URL(event.notification.data?.url||'/',self.location.origin);if(url.origin!==self.location.origin)return;event.waitUntil(clients.openWindow(url.href))});

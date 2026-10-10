@@ -47,10 +47,18 @@ export function broadcastPlayer(p){const heading=p.animationHeading??(p.status==
 
 // Translate the entire projection, including its pointer inverse, without changing
 // zoom. Follow the airborne ball as well as its position along the ground.
-export function ballFollowCamera(camera,ball,width,height){
+export function ballFollowCamera(camera,ball,width,height,heightScale=.65){
  if(!Number.isFinite(ball?.x)||!Number.isFinite(ball?.y))return camera;
  const at=camera.point(ball.x,ball.y);
- const lift=Math.max(0,ball.z||0)*camera.scale*.65;
+ const lift=Math.max(0,ball.z||0)*camera.scale*heightScale;
  const dx=width/2-at.x,dy=height/2-at.y+lift;
+ return {...camera,point:(x,y)=>{const p=camera.point(x,y);return {x:p.x+dx,y:p.y+dy}},world:(x,y)=>camera.world(x-dx,y-dy)};
+}
+
+// Ease into ball tracking from the exact pre-snap view without changing scale.
+export function snapFollowCamera(camera,ball,width,height,elapsed,heightScale=.65){
+ const tracked=ballFollowCamera(camera,ball,width,height,heightScale);
+ const t=Math.max(0,Math.min(1,elapsed/.65)),blend=t*t*(3-2*t);
+ const a=camera.point(0,0),b=tracked.point(0,0),dx=(b.x-a.x)*blend,dy=(b.y-a.y)*blend;
  return {...camera,point:(x,y)=>{const p=camera.point(x,y);return {x:p.x+dx,y:p.y+dy}},world:(x,y)=>camera.world(x-dx,y-dy)};
 }

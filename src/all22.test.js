@@ -53,3 +53,20 @@ test('zoom tracking centers traveling and airborne balls with an invertible fiel
   assert.equal(ballFollowCamera(base,null,width,height),base);
  }
 });
+
+ test('snap preserves the pre-snap projection, then smoothly follows without changing zoom',async()=>{
+ const {snapFollowCamera,broadcastCamera}=await import('./all22.js');
+ for(const fit of [all22Camera,broadcastCamera])for(const width of [390,1280]){
+  const base=fit([{players:[{x:26.65,y:0}]}],width,700,{zoom:2});
+  const ball={x:30,y:10,z:3};
+  const start=snapFollowCamera(base,ball,width,700,0);
+  assert.deepEqual(start.point(12,8),base.point(12,8));
+  const near=snapFollowCamera(base,ball,width,700,.001);
+  assert(Math.hypot(near.point(12,8).x-base.point(12,8).x,near.point(12,8).y-base.point(12,8).y)<.01);
+  const end=snapFollowCamera(base,ball,width,700,1);
+  assert.equal(end.scale,base.scale);
+  assert(Math.abs(end.point(ball.x,ball.y).x-width/2)<1e-8);
+  const pixel=end.point(12,8),world=end.world(pixel.x,pixel.y);
+  assert(Math.abs(world.x-12)<1e-8&&Math.abs(world.y-8)<1e-8);
+ }
+ });

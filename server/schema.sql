@@ -16,3 +16,13 @@ CREATE INDEX IF NOT EXISTS mp_target_phone ON mp_matches(target_hash,status);
 CREATE TABLE IF NOT EXISTS mp_limits (id TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);
 
 CREATE INDEX IF NOT EXISTS mp_limit_expiry ON mp_limits(expires);
+
+CREATE TABLE IF NOT EXISTS pc_franchises (uid TEXT PRIMARY KEY, revision INTEGER NOT NULL, doc TEXT NOT NULL, previous_doc TEXT, updated INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS nefl_leagues (id TEXT PRIMARY KEY, owner TEXT NOT NULL, revision INTEGER NOT NULL, doc TEXT NOT NULL, updated INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS pc_push (id TEXT PRIMARY KEY,uid TEXT NOT NULL,subscription TEXT NOT NULL,preferences TEXT NOT NULL,updated INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pc_push_uid ON pc_push(uid);
+CREATE TABLE IF NOT EXISTS pc_push_outbox (id TEXT PRIMARY KEY,uid TEXT NOT NULL,type TEXT NOT NULL,payload TEXT NOT NULL,created INTEGER NOT NULL,next_try INTEGER NOT NULL,attempts INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS pc_push_due ON pc_push_outbox(next_try);
+
+CREATE TABLE IF NOT EXISTS pc_notice_reads (uid TEXT NOT NULL,notice_id TEXT NOT NULL,read_at INTEGER NOT NULL,PRIMARY KEY(uid,notice_id));
