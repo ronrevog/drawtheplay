@@ -1,0 +1,8 @@
+import subprocess,pathlib,imageio_ffmpeg,json
+ff=imageio_ffmpeg.get_ffmpeg_exe();root=pathlib.Path('E:/REPOS/drawtheplay');out=root/'trailer/Playcall-Football-Trailer-45s-v3.mp4'
+f="[1:a]aresample=48000,loudnorm=I=-16:TP=-2:LRA=9,volume='if(lt(t,39),1,if(lt(t,41.6),1-(t-39)*0.3,0.22))':eval=frame,afade=t=out:st=44.65:d=0.35[music];[2:a]aresample=48000,highpass=f=90,loudnorm=I=-15:TP=-2:LRA=7,afade=t=in:d=0.03,afade=t=out:st=3.18:d=0.1,adelay=41720|41720[voice];[music][voice]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.84:level=false,atrim=duration=45[audio]"
+r=subprocess.run([ff,'-y','-hide_banner','-i',str(root/'trailer/work/picture.mp4'),'-i',str(root/'trailer/work/new-score.wav'),'-i',str(root/'trailer/work/cta-final-only.wav'),'-filter_complex',f,'-map','0:v','-map','[audio]','-c:v','copy','-c:a','aac','-b:a','256k','-ar','48000','-t','45','-movflags','+faststart',str(out)],capture_output=True,text=True)
+if r.returncode:raise RuntimeError(r.stderr)
+subprocess.run([ff,'-y','-hide_banner','-loglevel','error','-i',str(out),'-vn','-ac','1','-ar','16000',str(root/'trailer/work/v3-audio.wav')],check=True)
+r=subprocess.run([ff,'-hide_banner','-i',str(out),'-af','volumedetect','-f','null','-'],capture_output=True,text=True);print('\n'.join(l for l in r.stderr.splitlines() if any(x in l for x in ['Duration:','mean_volume','max_volume','frame='])))
+(root/'trailer/audio-revision-v3.json').write_text(json.dumps({'music':'New instrumental generated with Slop Studio audio tool','job':'fc-01M4K5R2AGY4PQP3S1CQSS5XHD','voiceSource':'fc-01M4K36707FM8JEHMSWMGWZQP8.m4v','voiceSourceIn':26.72,'voiceDuration':3.28,'voiceAt':41.72,'otherSourceAudio':False,'duration':45},indent=2))

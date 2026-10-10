@@ -1,0 +1,17 @@
+{
+  "musicSource": "E:\\REPOS\\DRAW_THE_PLAY\\fc-01M4K36NYTTT2RWKGQJ3NVS987.m4v",
+  "musicRange": [
+    0,
+    13
+  ],
+  "repeats": 3,
+  "crossfadeSeconds": 0.5,
+  "outroSource": "E:\\REPOS\\DRAW_THE_PLAY\\fc-01M4K36707FM8JEHMSWMGWZQP8.m4v",
+  "outroRange": [
+    22.83,
+    30.08
+  ],
+  "outroAt": 37.75,
+  "voiceAtApproximately": 41.76,
+  "syntheticMusicRemoved": true
+}
